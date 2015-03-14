@@ -15,13 +15,12 @@
 import pexpect
 import exceptions
 
-#def __execute_rpc__(conn, rpc_command):
-#    output = conn.rpc(str(rpc_command))
-#
-#    if len(output.xpath('/rpc-reply/error')) > 0:
-#        raise Exception(output.tostring)
-#
-#    return output
+def __execute_rpc__(device, rpc_command):
+    rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">'+rpc_command+'</Request>'
+    device.sendline(rpc_command)
+    device.expect("<Response.*</Response>")
+    response = device.match.group()
+    return response
 
 
 class IOSXR:
@@ -54,11 +53,17 @@ class IOSXR:
         device.sendline('xml')
         device.expect('XML>')
         self.device = device
+        rpc_command = '<Lock/>'
+        response = __execute_rpc__(self.device, rpc_command)
+        print response
 
     def close(self):
         """
         Closes the connection to the IOS-XR device.
         """
+        rpc_command = '<Unlock/>'
+        response = __execute_rpc__(self.device, rpc_command)
+        print response
         self.device.close()
 
     def load_candidate_config(self, filename=None, config=None):
@@ -72,27 +77,33 @@ class IOSXR:
                           configuration. By default is None.
         :param config:    String containing the desired configuration.
         """
-        raise NotImplementedError
+        # XXX
 
     def compare_config(self):
         """
         """
-        raise NotImplementedError
+        # XXX
 
     def commit_config(self):
         """
+        Commits the candidate config to the device.
         """
-        raise NotImplementedError
+        rpc_command = '<Commit/>'
+        response = __execute_rpc__(self.device, rpc_command)
+        print response
 
     def discard_config(self):
         """
         """
-        raise NotImplementedError
+        # XXX
 
     def rollback(self):
         """
         Used after a commit, the configuration will be reverted to the
         previous state.
         """
-        raise NotImplementedError
+        rpc_command = '<Rollback/>'
+        response = __execute_rpc__(self.device, rpc_command)
+        print response
+
 
