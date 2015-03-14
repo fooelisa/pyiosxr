@@ -26,7 +26,7 @@ import exceptions
 
 class IOSXR:
 
-    def __init__(self, hostname, user, password):
+    def __init__(self, hostname, username, password):
         """
         Device running IOS-XR.
 
@@ -35,7 +35,7 @@ class IOSXR:
         :param password:  Password
         """
         self.hostname = hostname
-        self.user = user
+        self.user = username
         self.password = password
 
     def open(self):
@@ -59,7 +59,7 @@ class IOSXR:
         """
         Closes the connection to the IOS-XR device.
         """
-        self.device.kill()
+        self.device.close()
 
     def load_candidate_config(self, filename=None, config=None):
         """
