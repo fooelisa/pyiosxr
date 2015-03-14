@@ -35,14 +35,14 @@ class IOSXR:
         :param password:  Password
         """
         self.hostname = hostname
-        self.user = username
+        self.username = username
         self.password = password
 
     def open(self):
         """
         Opens a connection to an IOS-XR device.
         """
-        device = pexpect.spawn('ssh ' + self.user + '@' + self.hostname)
+        device = pexpect.spawn('ssh ' + self.username + '@' + self.hostname)
         index = device.expect(['\(yes\/no\)\?', pexpect.TIMEOUT])
         if index == 0:
           device.sendline('yes')
