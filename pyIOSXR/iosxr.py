@@ -15,6 +15,7 @@
 import pexpect
 import exceptions
 
+
 def __execute_rpc__(device, rpc_command):
     rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">'+rpc_command+'</Request>'
     device.sendline(rpc_command)
@@ -55,7 +56,6 @@ class IOSXR:
         self.device = device
         rpc_command = '<Lock/>'
         response = __execute_rpc__(self.device, rpc_command)
-        print response
 
     def close(self):
         """
@@ -63,7 +63,6 @@ class IOSXR:
         """
         rpc_command = '<Unlock/>'
         response = __execute_rpc__(self.device, rpc_command)
-        print response
         self.device.close()
 
     def load_candidate_config(self, filename=None, config=None):
@@ -77,12 +76,27 @@ class IOSXR:
                           configuration. By default is None.
         :param config:    String containing the desired configuration.
         """
-        # XXX
+        configuration = ''
+
+        if filename is None:
+            configuration = config
+        else:
+            with open(filename) as f:
+                configuration = f.read()
+
+        rpc_command = '<CLI><Configuration>'+configuration+'</Configuration></CLI>'
+        response = __execute_rpc__(self.device, rpc_command)
 
     def compare_config(self):
         """
+        Compares candidate and running config and returns a diff, same as
+        issuing a 'show' on the device.
+
+        :return:  Diff between current and candidate config.
         """
-        # XXX
+        rpc_command = '<CLI><Configuration>show</Configuration></CLI>'
+        response = __execute_rpc__(self.device, rpc_command)
+        return response
 
     def commit_config(self):
         """
@@ -90,12 +104,13 @@ class IOSXR:
         """
         rpc_command = '<Commit/>'
         response = __execute_rpc__(self.device, rpc_command)
-        print response
 
     def discard_config(self):
         """
+        Clears uncommited changes in the current session.
         """
-        # XXX
+        rpc_command = '<Clear/>'
+        response = __execute_rpc__(self.device, rpc_command)
 
     def rollback(self):
         """
@@ -104,6 +119,4 @@ class IOSXR:
         """
         rpc_command = '<Rollback/>'
         response = __execute_rpc__(self.device, rpc_command)
-        print response
-
 
