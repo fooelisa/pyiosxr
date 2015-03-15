@@ -105,6 +105,7 @@ class IOSXR:
         rpc_command = '<Commit/>'
         response = __execute_rpc__(self.device, rpc_command)
 
+
     def discard_config(self):
         """
         Clears uncommited changes in the current session.

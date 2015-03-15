@@ -1,7 +1,9 @@
 pyIOSXR
 =====
 
-Python API for Cisco devices running IOS-XR
+In the spirit of pyEOS for Arista EOS devices, or pyEZ for JUNOS devices,
+pyIOSXR is a python library to help interact with Cisco devices running 
+IOS-XR.
 
 Documentation
 =============
@@ -25,3 +27,10 @@ To install, execute:
 ```
    pip install pyIOSXR
 ```
+
+License
+======
+
+Copyright 2015 Netflix, Inc.
+
+Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
