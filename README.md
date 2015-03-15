@@ -48,13 +48,11 @@ Documentation
 ```
 
 ### Rollback Config
-----
 ```
 >>> device.rollback()
 ```
 
 ### Close Connection
-----
 ```
 >>> device.close()
 ```
