@@ -105,6 +105,12 @@ class IOSXR:
         rpc_command = '<Commit/>'
         response = __execute_rpc__(self.device, rpc_command)
 
+    def commit_replace_config(self):
+        """
+        Commits the candidate config to the device, by replacing the existing one.
+        """
+        rpc_command = '<Commit Replace="true"/>'
+        response = __execute_rpc__(self.device, rpc_command)
 
     def discard_config(self):
         """

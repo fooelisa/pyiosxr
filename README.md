@@ -15,7 +15,14 @@ Documentation
 >>> device.load_candidate_config(filename='/home/ejasinska/github/pyiosxr/config.txt')
 >>> device.compare_config()
 '<Response MajorVersion="1" MinorVersion="0"><CLI><Configuration>\r\nBuilding configuration...\r\n!! IOS XR Configuration 5.1.3\r\ninterface TenGigE0/0/0/21\r\n description testing-xml-from-file\r\n!\r\nend\r\n\r\n</Configuration></CLI><ResultSummary ErrorCount="0"/></Response>'
+>>> device.discard_config()
+>>> device.compare_config()
+'<Response MajorVersion="1" MinorVersion="0"><CLI><Configuration>\r\nBuilding configuration...\r\n!! IOS XR Configuration 5.1.3\r\nend\r\n\r\n</Configuration></CLI><ResultSummary ErrorCount="0"/></Response>'
+>>> device.load_candidate_config(filename='/home/ejasinska/github/pyiosxr/other_config.txt')
+>>> device.compare_config()
+'<Response MajorVersion="1" MinorVersion="0"><CLI><Configuration>\r\nBuilding configuration...\r\n!! IOS XR Configuration 5.1.3\r\ninterface TenGigE0/0/0/21\r\n description testing-xml-from-the-other-file\r\n!\r\nend\r\n\r\n</Configuration></CLI><ResultSummary ErrorCount="0"/></Response>'
 >>> device.commit_config()
+>>> device.rollback()
 >>> device.close()
 ```
 
