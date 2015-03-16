@@ -96,6 +96,9 @@ class IOSXR:
         """
         rpc_command = '<CLI><Configuration>show</Configuration></CLI>'
         response = __execute_rpc__(self.device, rpc_command)
+        match = re.search(".*Building configuration...\\r\\n(.*)end.*",response)
+        if match is not None:
+          response = match.group(1)
         return response
 
     def commit_config(self):
