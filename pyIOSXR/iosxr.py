@@ -124,6 +124,10 @@ class IOSXR:
         Used after a commit, the configuration will be reverted to the
         previous state.
         """
-        rpc_command = '<Rollback/>'
+        rpc_command = '<Unlock/>'
+        response = __execute_rpc__(self.device, rpc_command)
+        rpc_command = '<Rollback><Previous>1</Previous></Rollback>'
+        response = __execute_rpc__(self.device, rpc_command)
+        rpc_command = '<Lock/>'
         response = __execute_rpc__(self.device, rpc_command)
 
