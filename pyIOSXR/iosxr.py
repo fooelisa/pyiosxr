@@ -24,6 +24,14 @@ def __execute_rpc__(device, rpc_command):
     response = device.match.group()
     return response
 
+def __execute_show__(show_command):
+    rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
+    response = __execute_rpc__(self.device, rpc_command)
+    match = re.search(".*(!! IOS XR Configuration.*)</Response>",response,re.DOTALL)
+    if match is not None:
+      response = match.group(1)
+    return response
+
 
 class IOSXR:
 
@@ -91,16 +99,14 @@ class IOSXR:
 
     def compare_config(self):
         """
-        Compares candidate and running config and returns a diff, same as
-        issuing a 'show' on the device.
+        Compares executed candidate config and running config and returns a diff.
 
-        :return:  Diff between current and candidate config.
+        :return:  Config diff.
         """
-        rpc_command = '<CLI><Configuration>show</Configuration></CLI>'
-        response = __execute_rpc__(self.device, rpc_command)
-        match = re.search(".*(!! IOS XR Configuration.*end)",response,re.DOTALL)
-        if match is not None:
-          response = match.group(1)
+	show_merge = __execute_show__('show configuration merge')
+	show_run = __execute_show__('show running-config')
+	d = Differ()
+	response = d.compare(show_merge,show_run)
         return response
 
     def commit_config(self):
