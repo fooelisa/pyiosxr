@@ -44,13 +44,14 @@ class IOSXR:
         Opens a connection to an IOS-XR device.
         """
         device = pexpect.spawn('ssh ' + self.username + '@' + self.hostname)
-        index = device.expect(['\(yes\/no\)\?', pexpect.TIMEOUT])
+        index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF])
         if index == 0:
           device.sendline('yes')
-        elif index == 1:
+          index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF])
+        if index == 1:
+          device.sendline(self.password)
+        elif index == 2:
           pass
-        device.expect('password:')
-        device.sendline(self.password)
         device.expect('#')
         device.sendline('xml')
         device.expect('XML>')
