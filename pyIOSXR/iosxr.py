@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import re
 import pexpect
 import exceptions
 
@@ -96,7 +97,7 @@ class IOSXR:
         """
         rpc_command = '<CLI><Configuration>show</Configuration></CLI>'
         response = __execute_rpc__(self.device, rpc_command)
-        match = re.search(".*Building configuration...\\r\\n(.*)end.*",response)
+        match = re.search(".*(!! IOS XR Configuration.*end)",response,re.DOTALL)
         if match is not None:
           response = match.group(1)
         return response
