@@ -13,8 +13,10 @@
 # the License.
 
 import re
+import sys
 import pexpect
 import exceptions
+import difflib
 
 
 def __execute_rpc__(device, rpc_command):
@@ -24,9 +26,9 @@ def __execute_rpc__(device, rpc_command):
     response = device.match.group()
     return response
 
-def __execute_show__(show_command):
+def __execute_show__(device, show_command):
     rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
-    response = __execute_rpc__(self.device, rpc_command)
+    response = __execute_rpc__(device, rpc_command)
     match = re.search(".*(!! IOS XR Configuration.*)</Response>",response,re.DOTALL)
     if match is not None:
       response = match.group(1)
@@ -103,11 +105,10 @@ class IOSXR:
 
         :return:  Config diff.
         """
-	show_merge = __execute_show__('show configuration merge')
-	show_run = __execute_show__('show running-config')
-	d = Differ()
-	response = d.compare(show_merge,show_run)
-        return response
+	show_merge = __execute_show__(self.device, 'show configuration merge')
+	show_run = __execute_show__(self.device, 'show running-config')
+	diff = difflib.unified_diff(show_run.splitlines(1),show_merge.splitlines(1),n=0)
+	return sys.stdout.write(''.join(diff))
 
     def commit_config(self):
         """
