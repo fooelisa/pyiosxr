@@ -29,21 +29,31 @@ Documentation
 ```python
 >>> device.load_candidate_config(filename='/home/ejasinska/github/pyiosxr/config.txt')
 >>> device.compare_config()
-'!! IOS XR Configuration 5.1.3\r\ninterface TenGigE0/0/0/21\r\n description testing-xml-from-file\r\n!\r\nend'
+---
++++
+@@ -704,0 +705,3 @@
++interface TenGigE0/0/0/21
++ description testing-xml-from-file
++!
 ```
 
 ### Discard Candidate Config
 ```python
 >>> device.discard_config()
 >>> device.compare_config()
-'!! IOS XR Configuration 5.1.3\r\nend'
+>>>
 ```
 
 ### Load and Commit Config
 ```python
 >>> device.load_candidate_config(filename='/home/ejasinska/github/pyiosxr/other_config.txt')
 >>> device.compare_config()
-'!! IOS XR Configuration 5.1.3\r\ninterface TenGigE0/0/0/21\r\n description testing-xml-from-the-other-file\r\n!\r\nend'
+---
++++
+@@ -704,0 +705,3 @@
++interface TenGigE0/0/0/21
++ description testing-xml-from-the-other-file
++!
 >>> device.commit_config()
 ```
 

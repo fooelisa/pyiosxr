@@ -29,7 +29,7 @@ def __execute_rpc__(device, rpc_command):
 def __execute_show__(device, show_command):
     rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
     response = __execute_rpc__(device, rpc_command)
-    match = re.search(".*(!! IOS XR Configuration.*)</Response>",response,re.DOTALL)
+    match = re.search(".*(!! IOS XR Configuration.*)</Configuration>",response,re.DOTALL)
     if match is not None:
       response = match.group(1)
     return response
@@ -101,7 +101,7 @@ class IOSXR:
 
     def compare_config(self):
         """
-        Compares executed candidate config and running config and returns a diff.
+        Compares executed candidate config with the running config and returns a diff.
 
         :return:  Config diff.
         """
@@ -109,6 +109,16 @@ class IOSXR:
 	show_run = __execute_show__(self.device, 'show running-config')
 	diff = difflib.unified_diff(show_run.splitlines(1),show_merge.splitlines(1),n=0)
 	return sys.stdout.write(''.join(diff))
+
+    def compare_replace_config(self):
+        """
+        Compares executed candidate config with the running config and returns a diff,
+	assuming the entire config will be replaced.
+
+        :return:  Config diff.
+        """
+	diff = __execute_show__(self.device, 'show configuration changes diff')
+	return sys.stdout.write(diff)
 
     def commit_config(self):
         """
