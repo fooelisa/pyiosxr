@@ -85,7 +85,7 @@ embedded into the call:
 ```python
 >>> device.show_bgp_summary()
 ...
->>> device.show_bgp_ipv4_unicast()
+>>> device.show_interfaces()
 ...
 ```
 
