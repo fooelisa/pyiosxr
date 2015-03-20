@@ -14,19 +14,42 @@
 
 import re
 import sys
+import difflib
 import pexpect
 import exceptions
-import difflib
 
 
 def __execute_rpc__(device, rpc_command):
+    """
+    Build and execute xml requests.
+
+    :return: response
+    """
     rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">'+rpc_command+'</Request>'
     device.sendline(rpc_command)
     device.expect("<Response.*</Response>")
     response = device.match.group()
     return response
 
+def __execute_conf_show__(device, show_command):
+    """
+    Ecexute show commands in config context.
+
+    :return: response
+    """
+    rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
+    response = __execute_rpc__(device, rpc_command)
+    match = re.search(".*(!! IOS XR Configuration.*)</Configuration>",response,re.DOTALL)
+    if match is not None:
+      response = match.group(1)
+    return response
+
 def __execute_show__(device, show_command):
+    """
+    Ecexute show commands not in config context.
+
+    :return: response
+    """
     rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
     response = __execute_rpc__(device, rpc_command)
     match = re.search(".*(!! IOS XR Configuration.*)</Configuration>",response,re.DOTALL)
@@ -39,7 +62,7 @@ class IOSXR:
 
     def __init__(self, hostname, username, password):
         """
-        Device running IOS-XR.
+        A device running IOS-XR.
 
         :param hostname:  IP or FQDN of the device you want to connect to
         :param username:  Username
@@ -48,6 +71,21 @@ class IOSXR:
         self.hostname = hostname
         self.username = username
         self.password = password
+
+    def __getattr__(self, item):
+        """
+        Ok, David came up with this kind of dynamic method. It takes function
+        calls with show commands encoded in the name. I'll replacs the
+        underscores for spaces and issues the show command... pretty neat!
+        """
+        def wrapper(*args, **kwargs):
+            cmd = [item.replace('_', ' ')]
+            return __execute_config_show__(self.device, cmd)
+
+        if item.startswith('show'):
+            return wrapper
+        else:
+            raise AttributeError("type object '%s' has no attribute '%s'" % (self.__class__.__name__, item))
 
     def open(self):
         """
@@ -80,9 +118,9 @@ class IOSXR:
     def load_candidate_config(self, filename=None, config=None):
         """
         Populates the attribute candidate_config with the desired
-        configuration. You can populate it from a file or from a string. If
-        you send both a filename and a string containing the configuration,
-        the file takes precedence.
+        configuration and loads it into the router. You can populate it from
+        a file or from a string. If you send both a filename and a string
+        containing the configuration, the file takes precedence.
 
         :param filename:  Path to the file containing the desired
                           configuration. By default is None.
@@ -101,35 +139,39 @@ class IOSXR:
 
     def compare_config(self):
         """
-        Compares executed candidate config with the running config and returns a diff.
+        Compares executed candidate config with the running config and
+        returns a diff, assuming the loaded config will be merged with the
+        existing one.
 
         :return:  Config diff.
         """
-	show_merge = __execute_show__(self.device, 'show configuration merge')
-	show_run = __execute_show__(self.device, 'show running-config')
-	diff = difflib.unified_diff(show_run.splitlines(1),show_merge.splitlines(1),n=0)
-	return sys.stdout.write(''.join(diff))
+        show_merge = __execute_config_show__(self.device, 'show configuration merge')
+        show_run = __execute_config_show__(self.device, 'show running-config')
+        diff = difflib.unified_diff(show_run.splitlines(1),show_merge.splitlines(1),n=0)
+        return sys.stdout.write(''.join(diff))
 
     def compare_replace_config(self):
         """
-        Compares executed candidate config with the running config and returns a diff,
-	assuming the entire config will be replaced.
+        Compares executed candidate config with the running config and
+        returns a diff, assuming the entire config will be replaced.
 
         :return:  Config diff.
         """
-	diff = __execute_show__(self.device, 'show configuration changes diff')
-	return sys.stdout.write(diff)
+        diff = __execute_config_show__(self.device, 'show configuration changes diff')
+        return sys.stdout.write(diff)
 
     def commit_config(self):
         """
-        Commits the candidate config to the device.
+        Commits the candidate config to the device, by merging it with the
+        existing one.
         """
         rpc_command = '<Commit/>'
         response = __execute_rpc__(self.device, rpc_command)
 
     def commit_replace_config(self):
         """
-        Commits the candidate config to the device, by replacing the existing one.
+        Commits the candidate config to the device, by replacing the existing
+        one.
         """
         rpc_command = '<Commit Replace="true"/>'
         response = __execute_rpc__(self.device, rpc_command)
@@ -144,7 +186,7 @@ class IOSXR:
     def rollback(self):
         """
         Used after a commit, the configuration will be reverted to the
-        previous state.
+        previous committed state.
         """
         rpc_command = '<Unlock/><Rollback><Previous>1</Previous></Rollback><Lock/>'
         response = __execute_rpc__(self.device, rpc_command)
