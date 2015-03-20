@@ -31,28 +31,15 @@ def __execute_rpc__(device, rpc_command):
     response = device.match.group()
     return response
 
-def __execute_conf_show__(device, show_command):
-    """
-    Ecexute show commands in config context.
-
-    :return: response
-    """
-    rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
-    response = __execute_rpc__(device, rpc_command)
-    match = re.search(".*(!! IOS XR Configuration.*)</Configuration>",response,re.DOTALL)
-    if match is not None:
-      response = match.group(1)
-    return response
-
 def __execute_show__(device, show_command):
     """
     Ecexute show commands not in config context.
 
     :return: response
     """
-    rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
+    rpc_command = '<CLI><Exec>'+show_command+'</Exec></CLI>'
     response = __execute_rpc__(device, rpc_command)
-    match = re.search(".*(!! IOS XR Configuration.*)</Configuration>",response,re.DOTALL)
+    match = re.search(".*(!! IOS XR Configuration.*)</Exec>",response,re.DOTALL)
     if match is not None:
       response = match.group(1)
     return response
