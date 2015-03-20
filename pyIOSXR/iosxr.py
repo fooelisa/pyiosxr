@@ -74,7 +74,7 @@ class IOSXR:
 
     def __getattr__(self, item):
         """
-        Ok, David came up with this kind of dynamic method. It takes function
+        Ok, David came up with this kind of dynamic method. It takes
         calls with show commands encoded in the name. I'll replacs the
         underscores for spaces and issues the show command... pretty neat!
         """

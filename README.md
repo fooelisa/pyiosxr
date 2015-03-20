@@ -73,15 +73,20 @@ call commit_replace_config():
 ```
 
 ### Rollback Config
-After a previous commit, rollabck will return to the previous configuration:
+After a previous commit, rollback() will return to the configuration prior
+to the commit:
 ```python
 >>> device.rollback()
 ```
 
 ### Running Show Commands
-Any show command can be executed in the following fashion:
+Any show command can be executed in the following fashion, with the command 
+embeded into the call:
 ```python
->>> device.get_show_ip_bgp()
+>>> device.show_bgp_summary()
+...
+>>> device.show_bgp_ipv4_unicast()
+...
 ```
 
 ### Close Connection
