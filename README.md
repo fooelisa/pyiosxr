@@ -30,7 +30,7 @@ Connect to an IOS-XR device:
 Load a candidate configuration from a file and show the diff that is going to 
 be applied when committing the config:
 ```python
->>> device.load_candidate_config(filename='/home/ejasinska/github/pyiosxr/config.txt')
+>>> device.load_candidate_config(filename='unit/test/config.txt')
 >>> device.compare_config()
 ---
 +++
@@ -52,7 +52,7 @@ call discard_config():
 ### Load, Compare and Commit Config
 If you want to commit the loaded configuration, call commit_config():
 ```python
->>> device.load_candidate_config(filename='/home/ejasinska/github/pyiosxr/other_config.txt')
+>>> device.load_candidate_config(filename='unit/test/other_config.txt')
 >>> device.compare_config()
 ---
 +++
@@ -67,7 +67,7 @@ If you want to commit the loaded configuration, call commit_config():
 If you would rather commit the config by replacing the existing configuration,
 call commit_replace_config():
 ```python
->>> device.load_candidate_config(filename='/home/ejasinska/github/pyiosxr/full_config.txt')
+>>> device.load_candidate_config(filename='unit/test/full_config.txt')
 >>> device.compare_replace_config()
 >>> device.commit_replace_config()
 ```
@@ -81,7 +81,7 @@ to the commit:
 
 ### Running Show Commands
 Any show command can be executed in the following fashion, with the command 
-embeded into the call:
+embedded into the call:
 ```python
 >>> device.show_bgp_summary()
 ...
