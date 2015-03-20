@@ -30,7 +30,7 @@ module: iosxr_install_config
 author: Elisa Jasinska <elisa@netflix.com>
 version_added: "1.0.0"
 short_description: 
-    Takes configuration from a file and loads it into a device running IOSXR.
+    Takes configuration from a file and loads it onto a device running IOSXR.
 description:
     This library will take the configuration from a file and load it into a 
     device running IOSXR. The old configuration will be either replaced or 
