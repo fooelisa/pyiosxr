@@ -49,8 +49,9 @@ call discard_config():
 >>>
 ```
 
-### Load, Compare and Commit Config
-If you want to commit the loaded configuration, call commit_config():
+### Load, Compare and Merge Config
+If you want to commit the loaded configuration and merge it with the existing 
+configuration, call commit_config():
 ```python
 >>> device.load_candidate_config(filename='unit/test/other_config.txt')
 >>> device.compare_config()
@@ -63,7 +64,7 @@ If you want to commit the loaded configuration, call commit_config():
 >>> device.commit_config()
 ```
 
-### Commit Replace
+### Commit Replace Config
 If you would rather commit the config by replacing the existing configuration,
 call commit_replace_config():
 ```python
