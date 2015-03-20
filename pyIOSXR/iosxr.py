@@ -19,29 +19,30 @@ import pexpect
 import exceptions
 
 
+# Build and execute xml requests.
 def __execute_rpc__(device, rpc_command):
-    """
-    Build and execute xml requests.
-
-    :return: response
-    """
     rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">'+rpc_command+'</Request>'
     device.sendline(rpc_command)
-    device.expect("<Response.*</Response>")
+    device.expect("<Response.*</Response>", timeout=300)
     response = device.match.group()
     return response
 
+# Ecexute show commands not in config context.
 def __execute_show__(device, show_command):
-    """
-    Ecexute show commands not in config context.
-
-    :return: response
-    """
     rpc_command = '<CLI><Exec>'+show_command+'</Exec></CLI>'
     response = __execute_rpc__(device, rpc_command)
-    match = re.search(".*(!! IOS XR Configuration.*)</Exec>",response,re.DOTALL)
+    match = re.search(".*<CLI><Exec>(.*)</Exec>",response,re.DOTALL)
     if match is not None:
-      response = match.group(1)
+        response = match.group(1)
+    return response
+
+# Ecexute show commands not in config context.
+def __execute_config_show__(device, show_command):
+    rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
+    response = __execute_rpc__(device, rpc_command)
+    match = re.search(".*(!! IOS XR Configuration.*)</Configuration>",response,re.DOTALL)
+    if match is not None:
+        response = match.group(1)
     return response
 
 
@@ -66,8 +67,12 @@ class IOSXR:
         underscores for spaces and issues the show command... pretty neat!
         """
         def wrapper(*args, **kwargs):
-            cmd = [item.replace('_', ' ')]
-            return __execute_config_show__(self.device, cmd)
+            cmd = item.replace('_', ' ')
+            response = __execute_show__(self.device, cmd)
+            match = re.search(".*(!! IOS XR Configuration.*)</Exec>",response,re.DOTALL)
+            if match is not None:
+                response = match.group(1)
+            return response
 
         if item.startswith('show'):
             return wrapper
@@ -133,7 +138,7 @@ class IOSXR:
         :return:  Config diff.
         """
         show_merge = __execute_config_show__(self.device, 'show configuration merge')
-        show_run = __execute_config_show__(self.device, 'show running-config')
+        show_run = __execute_show__(self.device, 'show running-config')
         diff = difflib.unified_diff(show_run.splitlines(1),show_merge.splitlines(1),n=0)
         return sys.stdout.write(''.join(diff))
 
