@@ -23,7 +23,7 @@ import exceptions
 def __execute_rpc__(device, rpc_command):
     rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">'+rpc_command+'</Request>'
     device.sendline(rpc_command)
-    device.expect("<Response.*</Response>", timeout=300)
+    device.expect("<Response.*</Response>")
     response = device.match.group()
     return response
 
