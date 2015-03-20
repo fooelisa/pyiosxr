@@ -27,7 +27,7 @@ logger = logging.getLogger('iosxr_install_config')
 DOCUMENTATION = '''
 ---
 module: iosxr_install_config
-author: Elisa Jasinska <ejasinska@netflix.com>
+author: Elisa Jasinska <elisa@netflix.com>
 version_added: "1.0.0"
 short_description: 
     Takes configuration from a file and loads it into a device running IOSXR.
@@ -42,17 +42,19 @@ requirements:
 
 options:
     hostname:
-        description: IP or FQDN of the device you want to connect to
-        required: true
+        description: 
+            IP or FQDN of the device you want to connect to
+        required: True
     username:
         description: Username
-        required: true
+        required: True
     password:
         description: Password
-        required: true
+        required: True
     config_file:
-        description: Where to load the configuration from.
-        required: true
+        description: 
+            File to load the configuration from.
+        required: True
     commit_changes:
         description: 
             If set to True the commit will be performed. If set to False, 
