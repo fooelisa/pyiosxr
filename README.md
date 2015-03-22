@@ -12,7 +12,7 @@ Install
 To install, execute:
 
 ```
-   pip install pyIOSXR
+pip install pyIOSXR
 ```
 
 Documentation
