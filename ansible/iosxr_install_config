@@ -29,12 +29,9 @@ DOCUMENTATION = '''
 module: iosxr_install_config
 author: Elisa Jasinska <elisa@netflix.com>
 version_added: "1.0.0"
-short_description: 
-    Takes configuration from a file and loads it onto a device running IOSXR.
-description:
-    This library will take the configuration from a file and load it into a 
-    device running IOSXR. The old configuration will be either replaced or 
-    merged with the new one. To use this module you need to have enable
+short_description: Takes configuration from a file and loads it onto a device running IOSXR.
+description: This library will take the configuration from a file and load it into a device running IOSXR. The old
+    configuration will be either replaced or merged with the new one. To use this module you need to have enable
     access on an IOSXR device.
 
 requirements:
@@ -42,8 +39,7 @@ requirements:
 
 options:
     hostname:
-        description: 
-            IP or FQDN of the device you want to connect to
+        description: IP or FQDN of the device you want to connect to
         required: True
     username:
         description: Username
@@ -52,26 +48,19 @@ options:
         description: Password
         required: True
     config_file:
-        description: 
-            File to load the configuration from.
+        description: File to load the configuration from.
         required: True
     commit_changes:
-        description: 
-            If set to True the commit will be performed. If set to False, 
-            we will not apply the changes, only check the differences.
-            Default: False.
+        description: If set to True the commit will be performed. If set to False, we will not apply the changes,
+            only check the differences. Default: False.
         required: False
     replace_config:
-        description: 
-            If set to True the entire configuration on the device will be 
-            replaced during the commit. If set to False, we will merge the 
-            new config with the existing one. Default: False.
+        description: If set to True the entire configuration on the device will be replaced during the commit. If
+            set to False, we will merge the new config with the existing one. Default: False.
         required: False
     diff_file:
-        description: 
-            A file where we store the "diff" between the running 
-            configuration and the new configuration. If diff_file is not set 
-            the diff between configurations is not saved.
+        description: A file where we store the "diff" between the running configuration and the new configuration.
+            If diff_file is not set the diff between configurations is not saved.
         required: False
 '''
 
@@ -116,7 +105,7 @@ def main():
             username=dict(required=True),
             password=dict(required=True),
             config_file=dict(required=True),
-            commit_changes=dict(required=True, default=False),
+            commit_changes=dict(required=True),
             replace_config=dict(required=True, default=False),
             diff_file=dict(required=False, default=None),
         ),
