@@ -106,7 +106,7 @@ def main():
             password=dict(required=True),
             config_file=dict(required=True),
             commit_changes=dict(required=True),
-            replace_config=dict(required=True, default=False),
+            replace_config=dict(required=True),
             diff_file=dict(required=False, default=None),
         ),
         supports_check_mode=True
