@@ -14,3 +14,9 @@
 
 class UnknownError(Exception):
     pass
+
+class InvalidInputError(Exception):
+    pass
+
+class XMLCLIError(Exception):
+    pass

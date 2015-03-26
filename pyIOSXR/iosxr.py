@@ -16,34 +16,53 @@ import re
 import sys
 import difflib
 import pexpect
-import exceptions
+from exceptions import XMLCLIError, InvalidInputError
+
+import xml.etree.ElementTree as ET
 
 
 # Build and execute xml requests.
 def __execute_rpc__(device, rpc_command):
     rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">'+rpc_command+'</Request>'
     device.sendline(rpc_command)
-    device.expect("<Response.*</Response>")
+    device.expect("<.*</Response>")
     response = device.match.group()
-    return response
+
+    root = ET.fromstring(response)
+    childs = [x.tag for x in list(root)]
+
+    if int(root.find('ResultSummary').get('ErrorCount')) > 0:
+
+        if 'CLI' in childs:
+            error_msg = root.find('CLI').get('ErrorMsg')
+        else:
+            error_msg = root.get('ErrorMsg')
+
+        error_msg += '\nOriginal call was: %s' % rpc_command
+        raise XMLCLIError(error_msg)
+
+    if 'CLI' in childs:
+        cli_childs = [x.tag for x in list(root.find('CLI'))]
+        if 'Configuration' in cli_childs:
+            output = root.find('CLI').find('Configuration').text
+            if output is None:
+                output = ''
+            elif 'Invalid input detected' in output:
+                raise InvalidInputError('Invalid input entered:\n%s' % output)
+
+    return root
 
 # Ecexute show commands not in config context.
 def __execute_show__(device, show_command):
     rpc_command = '<CLI><Exec>'+show_command+'</Exec></CLI>'
     response = __execute_rpc__(device, rpc_command)
-    match = re.search(".*<CLI><Exec>(.*)</Exec>",response,re.DOTALL)
-    if match is not None:
-        response = match.group(1)
-    return response
+    return response.find('CLI').find('Exec').text.lstrip()
 
 # Ecexute show commands not in config context.
 def __execute_config_show__(device, show_command):
     rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
     response = __execute_rpc__(device, rpc_command)
-    match = re.search(".*(!! IOS XR Configuration.*)</Configuration>",response,re.DOTALL)
-    if match is not None:
-        response = match.group(1)
-    return response
+    return response.find('CLI').find('Configuration').text.lstrip()
 
 
 class IOSXR:
@@ -127,7 +146,12 @@ class IOSXR:
                 configuration = f.read()
 
         rpc_command = '<CLI><Configuration>'+configuration+'</Configuration></CLI>'
-        response = __execute_rpc__(self.device, rpc_command)
+
+        try:
+            __execute_rpc__(self.device, rpc_command)
+        except InvalidInputError as e:
+            self.discard_config()
+            raise InvalidInputError(e.message)
 
     def compare_config(self):
         """
@@ -139,8 +163,10 @@ class IOSXR:
         """
         show_merge = __execute_config_show__(self.device, 'show configuration merge')
         show_run = __execute_show__(self.device, 'show running-config')
-        diff = difflib.unified_diff(show_run.splitlines(1),show_merge.splitlines(1),n=0)
-        return sys.stdout.write(''.join(diff))
+
+        diff = difflib.unified_diff(show_run.splitlines(1)[2:-2],show_merge.splitlines(1)[2:-2],n=0)
+        diff = ''.join([x.replace('\r', '') for x in diff])
+        return diff
 
     def compare_replace_config(self):
         """
@@ -150,7 +176,8 @@ class IOSXR:
         :return:  Config diff.
         """
         diff = __execute_config_show__(self.device, 'show configuration changes diff')
-        return sys.stdout.write(diff)
+
+        return ''.join(diff.splitlines(1)[2:-2])
 
     def commit_config(self):
         """
