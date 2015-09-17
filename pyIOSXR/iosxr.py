@@ -67,7 +67,7 @@ def __execute_config_show__(device, show_command):
 
 class IOSXR:
 
-    def __init__(self, hostname, username, password):
+    def __init__(self, hostname, username, password, port=22):
         """
         A device running IOS-XR.
 
@@ -78,7 +78,8 @@ class IOSXR:
         self.hostname = hostname
         self.username = username
         self.password = password
-
+        self.port = port
+        
     def __getattr__(self, item):
         """
         Ok, David came up with this kind of dynamic method. It takes
@@ -102,7 +103,7 @@ class IOSXR:
         """
         Opens a connection to an IOS-XR device.
         """
-        device = pexpect.spawn('ssh ' + self.username + '@' + self.hostname)
+        device = pexpect.spawn('ssh -p {} {}@{}'.format(self.port, self.username, self.hostname))
         index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF])
         if index == 0:
           device.sendline('yes')
