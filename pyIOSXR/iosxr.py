@@ -34,9 +34,11 @@ def __execute_rpc__(device, rpc_command):
     if int(root.find('ResultSummary').get('ErrorCount')) > 0:
 
         if 'CLI' in childs:
-            error_msg = root.find('CLI').get('ErrorMsg')
+            error_msg = root.find('CLI').get('ErrorMsg') or ''
+        elif 'Commit' in childs:
+            error_msg = root.find('Commit').get('ErrorMsg') or ''
         else:
-            error_msg = root.get('ErrorMsg')
+            error_msg = root.get('ErrorMsg') or ''
 
         error_msg += '\nOriginal call was: %s' % rpc_command
         raise XMLCLIError(error_msg)
