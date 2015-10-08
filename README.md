@@ -22,7 +22,7 @@ Documentation
 Connect to an IOS-XR device:
 ```python
 >>> from pyIOSXR import IOSXR
->>> device = IOSXR(hostname='lab001', username='ejasinska', password='passwd', timeout=120)
+>>> device = IOSXR(hostname='lab001', username='ejasinska', password='passwd', port=22, timeout=120)
 >>> device.open()
 ```
 
