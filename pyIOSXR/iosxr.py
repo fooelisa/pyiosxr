@@ -22,10 +22,10 @@ import xml.etree.ElementTree as ET
 
 
 # Build and execute xml requests.
-def __execute_rpc__(device, rpc_command):
+def __execute_rpc__(device, rpc_command, timeout):
     rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">'+rpc_command+'</Request>'
     device.sendline(rpc_command)
-    device.expect("<.*</Response>")
+    device.expect("<.*</Response>", timeout = timeout)
     response = device.match.group()
 
     root = ET.fromstring(response)
@@ -53,31 +53,33 @@ def __execute_rpc__(device, rpc_command):
     return root
 
 # Ecexute show commands not in config context.
-def __execute_show__(device, show_command):
+def __execute_show__(device, show_command, timeout):
     rpc_command = '<CLI><Exec>'+show_command+'</Exec></CLI>'
-    response = __execute_rpc__(device, rpc_command)
+    response = __execute_rpc__(device, rpc_command, timeout)
     return response.find('CLI').find('Exec').text.lstrip()
 
 # Ecexute show commands not in config context.
-def __execute_config_show__(device, show_command):
+def __execute_config_show__(device, show_command, timeout):
     rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
-    response = __execute_rpc__(device, rpc_command)
+    response = __execute_rpc__(device, rpc_command, timeout)
     return response.find('CLI').find('Configuration').text.lstrip()
 
 
 class IOSXR:
 
-    def __init__(self, hostname, username, password):
+    def __init__(self, hostname, username, password, timeout = 60):
         """
         A device running IOS-XR.
 
         :param hostname:  IP or FQDN of the device you want to connect to
         :param username:  Username
         :param password:  Password
+        :param timeout:   Timeout (default: 60 sec)
         """
         self.hostname = hostname
         self.username = username
         self.password = password
+        self.timeout  = timeout
 
     def __getattr__(self, item):
         """
@@ -87,7 +89,7 @@ class IOSXR:
         """
         def wrapper(*args, **kwargs):
             cmd = item.replace('_', ' ')
-            response = __execute_show__(self.device, cmd)
+            response = __execute_show__(self.device, cmd, self.timeout)
             match = re.search(".*(!! IOS XR Configuration.*)</Exec>",response,re.DOTALL)
             if match is not None:
                 response = match.group(1)
@@ -103,27 +105,27 @@ class IOSXR:
         Opens a connection to an IOS-XR device.
         """
         device = pexpect.spawn('ssh ' + self.username + '@' + self.hostname)
-        index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF])
+        index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF], timeout = self.timeout)
         if index == 0:
           device.sendline('yes')
-          index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF])
+          index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF], timeout = self.timeout)
         if index == 1:
           device.sendline(self.password)
         elif index == 2:
           pass
-        device.expect('#')
+        device.expect('#', timeout = self.timeout)
         device.sendline('xml')
-        device.expect('XML>')
+        device.expect('XML>', timeout = self.timeout)
         self.device = device
         rpc_command = '<Lock/>'
-        response = __execute_rpc__(self.device, rpc_command)
+        response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
     def close(self):
         """
         Closes the connection to the IOS-XR device.
         """
         rpc_command = '<Unlock/>'
-        response = __execute_rpc__(self.device, rpc_command)
+        response = __execute_rpc__(self.device, rpc_command, self.timeout)
         self.device.close()
 
     def load_candidate_config(self, filename=None, config=None):
@@ -148,7 +150,7 @@ class IOSXR:
         rpc_command = '<CLI><Configuration>'+configuration+'</Configuration></CLI>'
 
         try:
-            __execute_rpc__(self.device, rpc_command)
+            __execute_rpc__(self.device, rpc_command, self.timeout)
         except InvalidInputError as e:
             self.discard_config()
             raise InvalidInputError(e.message)
@@ -161,8 +163,8 @@ class IOSXR:
 
         :return:  Config diff.
         """
-        show_merge = __execute_config_show__(self.device, 'show configuration merge')
-        show_run = __execute_show__(self.device, 'show running-config')
+        show_merge = __execute_config_show__(self.device, 'show configuration merge', self.timeout)
+        show_run = __execute_show__(self.device, 'show running-config', self.timeout)
 
         diff = difflib.unified_diff(show_run.splitlines(1)[2:-2],show_merge.splitlines(1)[2:-2],n=0)
         diff = ''.join([x.replace('\r', '') for x in diff])
@@ -175,7 +177,7 @@ class IOSXR:
 
         :return:  Config diff.
         """
-        diff = __execute_config_show__(self.device, 'show configuration changes diff')
+        diff = __execute_config_show__(self.device, 'show configuration changes diff', self.timeout)
 
         return ''.join(diff.splitlines(1)[2:-2])
 
@@ -185,7 +187,7 @@ class IOSXR:
         existing one.
         """
         rpc_command = '<Commit/>'
-        response = __execute_rpc__(self.device, rpc_command)
+        response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
     def commit_replace_config(self):
         """
@@ -193,14 +195,14 @@ class IOSXR:
         one.
         """
         rpc_command = '<Commit Replace="true"/>'
-        response = __execute_rpc__(self.device, rpc_command)
+        response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
     def discard_config(self):
         """
         Clears uncommited changes in the current session.
         """
         rpc_command = '<Clear/>'
-        response = __execute_rpc__(self.device, rpc_command)
+        response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
     def rollback(self):
         """
@@ -208,5 +210,5 @@ class IOSXR:
         previous committed state.
         """
         rpc_command = '<Unlock/><Rollback><Previous>1</Previous></Rollback><Lock/>'
-        response = __execute_rpc__(self.device, rpc_command)
+        response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
