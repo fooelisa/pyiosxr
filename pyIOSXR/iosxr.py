@@ -34,9 +34,11 @@ def __execute_rpc__(device, rpc_command, timeout):
     if int(root.find('ResultSummary').get('ErrorCount')) > 0:
 
         if 'CLI' in childs:
-            error_msg = root.find('CLI').get('ErrorMsg')
+            error_msg = root.find('CLI').get('ErrorMsg') or ''
+        elif 'Commit' in childs:
+            error_msg = root.find('Commit').get('ErrorMsg') or ''
         else:
-            error_msg = root.get('ErrorMsg')
+            error_msg = root.get('ErrorMsg') or ''
 
         error_msg += '\nOriginal call was: %s' % rpc_command
         raise XMLCLIError(error_msg)
@@ -67,18 +69,20 @@ def __execute_config_show__(device, show_command, timeout):
 
 class IOSXR:
 
-    def __init__(self, hostname, username, password, timeout = 60):
+    def __init__(self, hostname, username, password, port=22, timeout=60):
         """
         A device running IOS-XR.
 
         :param hostname:  IP or FQDN of the device you want to connect to
         :param username:  Username
         :param password:  Password
+        :param port:      SSH Port
         :param timeout:   Timeout (default: 60 sec)
         """
         self.hostname = hostname
         self.username = username
         self.password = password
+        self.port     = port
         self.timeout  = timeout
 
     def __getattr__(self, item):
@@ -104,7 +108,7 @@ class IOSXR:
         """
         Opens a connection to an IOS-XR device.
         """
-        device = pexpect.spawn('ssh ' + self.username + '@' + self.hostname)
+        device = pexpect.spawn('ssh -p {} {}@{}'.format(self.port, self.username, self.hostname))
         index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF], timeout = self.timeout)
         if index == 0:
           device.sendline('yes')
