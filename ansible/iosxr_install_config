@@ -47,6 +47,12 @@ options:
     password:
         description: Password
         required: True
+    port:
+        description: SSH Port
+        required: False
+    timeout:
+        description: Timeout
+        required: False
     config_file:
         description: File to load the configuration from.
         required: True
@@ -76,6 +82,8 @@ EXAMPLES = '''
             hostname={{ hostname }}
             username=admin
             password=p4ssw0rd
+            port=22
+            timeout=120
             config_file=config/{{ hostname }}/new.conf
             commit_changes={{ commit_changes }}
             replace_config={{ replace_config }}
@@ -104,6 +112,8 @@ def main():
             hostname=dict(required=True),
             username=dict(required=True),
             password=dict(required=True),
+            port=dict(required=False, default=22),
+            timeout=dict(required=False, default=60),
             config_file=dict(required=True),
             commit_changes=dict(required=True),
             replace_config=dict(required=True),
@@ -115,6 +125,8 @@ def main():
     hostname = module.params['hostname']
     username = module.params['username']
     password = module.params['password']
+    port     = module.params['port']
+    timeout  = module.params['timeout']
 
     config_file = module.params['config_file']
     commit_changes = module.params['commit_changes']
@@ -127,7 +139,7 @@ def main():
     if replace_config.__class__ is str:
         replace_config = ast.literal_eval(replace_config)
 
-    device = IOSXR(hostname, username, password)
+    device = IOSXR(hostname, username, password, port, timeout)
     device.open()
     device.load_candidate_config(filename=config_file)
 
