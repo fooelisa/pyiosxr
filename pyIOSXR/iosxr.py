@@ -76,7 +76,7 @@ class IOSXR:
         :param hostname:  IP or FQDN of the device you want to connect to
         :param username:  Username
         :param password:  Password
-        :param port:      SSH Port
+        :param port:      SSH Port (default: 22)
         :param timeout:   Timeout (default: 60 sec)
         """
         self.hostname = hostname
