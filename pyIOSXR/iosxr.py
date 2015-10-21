@@ -108,7 +108,7 @@ class IOSXR:
         """
         Opens a connection to an IOS-XR device.
         """
-        device = pexpect.spawn('ssh -p {} {}@{}'.format(self.port, self.username, self.hostname))
+        device = pexpect.spawn('ssh -o ConnectTimeout={} -p {} {}@{}'.format(self.timeout, self.port, self.username, self.hostname))
         index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF], timeout = self.timeout)
         if index == 0:
           device.sendline('yes')
