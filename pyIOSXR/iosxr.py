@@ -16,7 +16,7 @@ import re
 import sys
 import difflib
 import pexpect
-from exceptions import XMLCLIError, InvalidInputError
+from exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError
 
 import xml.etree.ElementTree as ET
 
@@ -24,8 +24,13 @@ import xml.etree.ElementTree as ET
 # Build and execute xml requests.
 def __execute_rpc__(device, rpc_command, timeout):
     rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">'+rpc_command+'</Request>'
-    device.sendline(rpc_command)
-    device.expect("<.*</Response>", timeout = timeout)
+    try:
+        device.sendline(rpc_command)
+        device.expect("<.*</Response>", timeout = timeout)
+    except pexpect.TIMEOUT as e:
+        raise TimeoutError("pexpect timeout error")
+    except pexpect.EOF as e:
+        raise EOFError("pexpect EOF error")
     response = device.match.group()
 
     root = ET.fromstring(response)
@@ -109,17 +114,22 @@ class IOSXR:
         Opens a connection to an IOS-XR device.
         """
         device = pexpect.spawn('ssh -o ConnectTimeout={} -p {} {}@{}'.format(self.timeout, self.port, self.username, self.hostname))
-        index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF], timeout = self.timeout)
-        if index == 0:
-          device.sendline('yes')
-          index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF], timeout = self.timeout)
-        if index == 1:
-          device.sendline(self.password)
-        elif index == 2:
-          pass
-        device.expect('#', timeout = self.timeout)
-        device.sendline('xml')
-        device.expect('XML>', timeout = self.timeout)
+        try:
+            index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF], timeout = self.timeout)
+            if index == 0:
+                device.sendline('yes')
+                index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF], timeout = self.timeout)
+            if index == 1:
+                device.sendline(self.password)
+            elif index == 2:
+                pass
+            device.expect('#', timeout = self.timeout)
+            device.sendline('xml')
+            device.expect('XML>', timeout = self.timeout)
+        except pexpect.TIMEOUT as e:
+            raise TimeoutError("pexpect timeout error")
+        except pexpect.EOF as e:
+            raise EOFError("pexpect EOF error")
         self.device = device
         rpc_command = '<Lock/>'
         response = __execute_rpc__(self.device, rpc_command, self.timeout)

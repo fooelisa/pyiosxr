@@ -20,3 +20,9 @@ class InvalidInputError(Exception):
 
 class XMLCLIError(Exception):
     pass
+
+class TimeoutError(Exception):
+    pass
+
+class EOFError(Exception):
+    pass
