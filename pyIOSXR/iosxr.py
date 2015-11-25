@@ -109,6 +109,9 @@ class IOSXR:
         else:
             raise AttributeError("type object '%s' has no attribute '%s'" % (self.__class__.__name__, item))
 
+    def make_rpc_call(self, rpc_command):
+        return __execute_rpc__(self.device, rpc_command, self.timeout)
+
     def open(self):
         """
         Opens a connection to an IOS-XR device.
