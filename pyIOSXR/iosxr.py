@@ -26,12 +26,15 @@ def __execute_rpc__(device, rpc_command, timeout):
     rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">'+rpc_command+'</Request>'
     try:
         device.sendline(rpc_command)
-        device.expect("<.*</Response>", timeout = timeout)
+        device.expect_exact("</Response>", timeout = timeout)
     except pexpect.TIMEOUT as e:
         raise TimeoutError("pexpect timeout error")
     except pexpect.EOF as e:
         raise EOFError("pexpect EOF error")
-    response = device.match.group()
+
+    #remove leading XML-agent prompt
+    response_assembled = device.before+device.match
+    response = re.sub('^[^<]*', '', response_assembled)
 
     root = ET.fromstring(response)
     childs = [x.tag for x in list(root)]
