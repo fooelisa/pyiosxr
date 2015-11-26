@@ -116,7 +116,8 @@ class IOSXR:
         """
         Allow a user to query a device directly using XML-requests
         """
-        return __execute_rpc__(self.device, rpc_command, self.timeout)
+        result = __execute_rpc__(self.device, rpc_command, self.timeout)
+        return ET.dump(result)
 
     def open(self):
         """
