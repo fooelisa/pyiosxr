@@ -90,6 +90,13 @@ embedded into the call:
 ...
 ```
 
+### Running XML Commands
+An arbitrary XML command can be executed with the command:
+```python
+>>> device.make_rpc_call("<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>")
+...
+```
+
 ### Close Connection
 Call close() to close the connection to the device:
 ```python
@@ -108,6 +115,6 @@ digging through Cisco docs and XML would have been impossible.
 License
 ======
 
-Copyright 2015 Netflix, Inc.
+Copyright 2015-2016 Netflix, Inc.
 
 Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0

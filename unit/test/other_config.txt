@@ -1,2 +1,2 @@
-int Te0/0/0/21
+int GigabitEthernet0/0/0/1
 description testing-xml-from-the-other-file
