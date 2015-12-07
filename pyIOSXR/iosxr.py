@@ -39,17 +39,20 @@ def __execute_rpc__(device, rpc_command, timeout):
     root = ET.fromstring(response)
     childs = [x.tag for x in list(root)]
 
-    if int(root.find('ResultSummary').get('ErrorCount')) > 0:
+    try:
+        if int(root.find('ResultSummary').get('ErrorCount')) > 0:
 
-        if 'CLI' in childs:
-            error_msg = root.find('CLI').get('ErrorMsg') or ''
-        elif 'Commit' in childs:
-            error_msg = root.find('Commit').get('ErrorMsg') or ''
-        else:
-            error_msg = root.get('ErrorMsg') or ''
+            if 'CLI' in childs:
+                error_msg = root.find('CLI').get('ErrorMsg') or ''
+            elif 'Commit' in childs:
+                error_msg = root.find('Commit').get('ErrorMsg') or ''
+            else:
+                error_msg = root.get('ErrorMsg') or ''
 
-        error_msg += '\nOriginal call was: %s' % rpc_command
-        raise XMLCLIError(error_msg)
+            error_msg += '\nOriginal call was: %s' % rpc_command
+            raise XMLCLIError(error_msg)
+    except AttributeError:
+        raise XMLCLIError('Empty response')
 
     if 'CLI' in childs:
         cli_childs = [x.tag for x in list(root.find('CLI'))]
