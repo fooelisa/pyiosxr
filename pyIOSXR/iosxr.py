@@ -135,7 +135,9 @@ class IOSXR:
                 pass
             device.expect('#', timeout = self.timeout)
             device.sendline('xml')
-            device.expect('XML>', timeout = self.timeout)
+            index = device.expect(['XML>', 'ERROR: 0x24319600'], timeout = self.timeout)
+            if index == 1:
+                raise XMLCLIError('XML TTY agent has not been started. Please configure \'xml agent tty\'.')
         except pexpect.TIMEOUT as e:
             raise TimeoutError("pexpect timeout error")
         except pexpect.EOF as e:
