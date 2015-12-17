@@ -188,7 +188,7 @@ class IOSXR:
         :return:  Config diff.
         """
         show_merge = __execute_config_show__(self.device, 'show configuration merge', self.timeout)
-        show_run = __execute_show__(self.device, 'show running-config', self.timeout)
+        show_run = __execute_config_show__(self.device, 'show running-config', self.timeout)
 
         diff = difflib.unified_diff(show_run.splitlines(1)[2:-2],show_merge.splitlines(1)[2:-2],n=0)
         diff = ''.join([x.replace('\r', '') for x in diff])
@@ -235,4 +235,3 @@ class IOSXR:
         """
         rpc_command = '<Unlock/><Rollback><Previous>1</Previous></Rollback><Lock/>'
         response = __execute_rpc__(self.device, rpc_command, self.timeout)
-
