@@ -112,10 +112,11 @@ class IOSXR:
         else:
             raise AttributeError("type object '%s' has no attribute '%s'" % (self.__class__.__name__, item))
 
-    def make_rpc_call(self, rpc_command):
+    def make_rpc_call(self, rpc_command, timeout = 60):
         """
         Allow a user to query a device directly using XML-requests
         """
+        self.timeout = timeout
         result = __execute_rpc__(self.device, rpc_command, self.timeout)
         return ET.tostring(result)
 
