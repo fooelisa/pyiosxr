@@ -215,6 +215,14 @@ class IOSXR:
         rpc_command = '<Commit/>'
         response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
+    def commit_config_with_label(self,label,comment):
+        """
+        Commits the candidate config to the device, by merging it with the
+        existing one.  Includes a user defined commit label & comment
+        """
+        rpc_command = '<Commit Label="'+label+'" Comment="'+comment+'"/>'
+        response = __execute_rpc__(self.device, rpc_command, self.timeout)
+
     def commit_replace_config(self):
         """
         Commits the candidate config to the device, by replacing the existing
