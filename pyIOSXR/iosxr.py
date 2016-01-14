@@ -77,7 +77,7 @@ def __execute_config_show__(device, show_command, timeout):
 
 class IOSXR:
 
-    def __init__(self, hostname, username, password, port=22, timeout=60):
+    def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None):
         """
         A device running IOS-XR.
 
@@ -92,6 +92,7 @@ class IOSXR:
         self.password = password
         self.port     = port
         self.timeout  = timeout
+        self.logfile  = logfile
 
     def __getattr__(self, item):
         """
@@ -123,7 +124,7 @@ class IOSXR:
         """
         Opens a connection to an IOS-XR device.
         """
-        device = pexpect.spawn('ssh -o ConnectTimeout={} -p {} {}@{}'.format(self.timeout, self.port, self.username, self.hostname))
+        device = pexpect.spawn('ssh -o ConnectTimeout={} -p {} {}@{}'.format(self.timeout, self.port, self.username, self.hostname), logfile=self.logfile)
         try:
             index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF], timeout = self.timeout)
             if index == 0:
