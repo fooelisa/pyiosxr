@@ -52,6 +52,7 @@ call discard_config():
 ### Load, Compare and Merge Config
 If you want to commit the loaded configuration and merge it with the existing 
 configuration, call commit_config():
+(comment and label is optional parameters)
 ```python
 >>> device.load_candidate_config(filename='unit/test/other_config.txt')
 >>> device.compare_config()
@@ -61,16 +62,17 @@ configuration, call commit_config():
 +interface TenGigE0/0/0/21
 + description testing-xml-from-the-other-file
 +!
->>> device.commit_config()
+>>> device.commit_config(comment='comment saved on device', label='label')
 ```
 
 ### Commit Replace Config
 If you would rather commit the config by replacing the existing configuration,
 call commit_replace_config():
+(comment and label is optional parameters)
 ```python
 >>> device.load_candidate_config(filename='unit/test/full_config.txt')
 >>> device.compare_replace_config()
->>> device.commit_replace_config()
+>>> device.commit_replace_config(comment='comment saved to device', label='label')
 ```
 
 ### Rollback Config
@@ -102,6 +104,22 @@ Call close() to close the connection to the device:
 ```python
 >>> device.close()
 ```
+
+### Debugging Connection
+Added posibillity to create a logfile of the communication between pyIOSXR and the router.
+```python
+>>> from pyIOSXR import IOSXR
+>>> import sys
+>>> device=IOSXR(hostname="router", username="cisco", password="cisco", port=22, timeout=120, logfile=sys.stdout)
+
+OR
+
+>>> from pyIOSXR import IOSXR
+>>> import sys
+>>> file = open("logfile.log")
+>>> device=IOSXR(hostname="router", username="cisco", password="cisco", port=22, timeout=120, logfile=file)
+```
+
 
 Thanks
 ======
