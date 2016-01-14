@@ -208,20 +208,28 @@ class IOSXR:
 
         return ''.join(diff.splitlines(1)[2:-2])
 
-    def commit_config(self):
+    def commit_config(self, comment=None, label=None):
         """
         Commits the candidate config to the device, by merging it with the
         existing one.
         """
-        rpc_command = '<Commit/>'
+        params = ''
+        if comment: params += ' Comment="%s"' % comment
+        if label:   params += ' Label="%s"' % label
+   
+        rpc_command = '<Commit%s/>' % params
         response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
-    def commit_replace_config(self):
+    def commit_replace_config(self, comment=None, label=None):
         """
         Commits the candidate config to the device, by replacing the existing
         one.
         """
-        rpc_command = '<Commit Replace="true"/>'
+        params = ''
+        if comment: params += ' Comment="%s"' % comment
+        if label:   params += ' Label="%s"' % label
+   
+        rpc_command = '<Commit Replace="true"%s/>' % params
         response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
     def discard_config(self):
