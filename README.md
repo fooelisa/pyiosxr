@@ -106,7 +106,7 @@ Call close() to close the connection to the device:
 ```
 
 ### Debugging Connection
-Added posibillity to create a logfile of the communication between pyIOSXR and the router.
+create a logfile of the communication between pyIOSXR and the router.
 ```python
 >>> from pyIOSXR import IOSXR
 >>> import sys
