@@ -207,20 +207,17 @@ class IOSXR:
 
         return ''.join(diff.splitlines(1)[2:-2])
 
-    def commit_config(self):
+    def commit_config(self, label=None, comment=None):
         """
         Commits the candidate config to the device, by merging it with the
         existing one.
         """
-        rpc_command = '<Commit/>'
-        response = __execute_rpc__(self.device, rpc_command, self.timeout)
-
-    def commit_config_with_label(self,label,comment):
-        """
-        Commits the candidate config to the device, by merging it with the
-        existing one.  Includes a user defined commit label & comment
-        """
-        rpc_command = '<Commit Label="'+label+'" Comment="'+comment+'"/>'
+        rpc_command = '<Commit'
+        if label: 
+            rpc_command += ' Label="' + label + '"'
+        if comment: 
+            rpc_command += ' Comment="' + comment + '"'
+        rpc_command += '/>'
         response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
     def commit_replace_config(self):
