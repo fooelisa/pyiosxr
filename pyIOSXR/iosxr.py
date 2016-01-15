@@ -26,7 +26,9 @@ def __execute_rpc__(device, rpc_command, timeout):
     rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">'+rpc_command+'</Request>'
     try:
         device.sendline(rpc_command)
-        device.expect_exact("</Response>", timeout = timeout)
+        index = device.expect_exact(["</Response>","ERROR: 0xa240fe00"], timeout = timeout)
+        if index == 1:
+            raise XMLCLIError('The XML document is not well-formed')
     except pexpect.TIMEOUT as e:
         raise TimeoutError("pexpect timeout error")
     except pexpect.EOF as e:
