@@ -65,6 +65,20 @@ configuration, call commit_config():
 >>> device.commit_config(comment='comment saved on device', label='label')
 ```
 
+### Merge Config with Timer based autorollback
+If you want to commit the loaded configuration with a timed autorollback that
+needs to be confirmed use the confirmed= keyword on the commit, parameters is
+seconds to wait before autorollback, values from 30 to 300sec.
+when using confirmed= you need to do another commit_config() without parameters
+within the time spesified to acknowledge the commit or else it rolls back your changes.
+(comment and label is optional parameters)
+```python
+>>> device.load_candidate_config(filename='unit/test/other_config.txt')
+>>> device.commit_config(comment='comment saved on device', label='label', confirmed=30)
+.... Code to do checks etc ....
+>>> device.commit_config()
+```
+
 ### Commit Replace Config
 If you would rather commit the config by replacing the existing configuration,
 call commit_replace_config():
