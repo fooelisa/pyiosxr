@@ -214,9 +214,9 @@ class IOSXR:
         """
         rpc_command = '<Commit'
         if label: 
-            rpc_command += ' Label="' + label + '"'
+            rpc_command += ' Label="%s"' % label
         if comment: 
-            rpc_command += ' Comment="' + comment + '"'
+            rpc_command += ' Comment="%s"' % comment
         rpc_command += '/>'
         response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
