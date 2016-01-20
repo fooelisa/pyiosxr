@@ -88,6 +88,7 @@ class IOSXR:
         :param password:  Password
         :param port:      SSH Port (default: 22)
         :param timeout:   Timeout (default: 60 sec)
+        :param logfile:   File-like object to save device communication to or None to disable logging
         """
         self.hostname = hostname
         self.username = username
@@ -214,6 +215,10 @@ class IOSXR:
         """
         Commits the candidate config to the device, by merging it with the
         existing one.
+        
+        :param comment:   User comment saved on this commit on the device
+        :param label:     User label saved on this commit on the device
+        :param confirmed: Commit with auto-rollback if new commit is not made in 30 to 300 sec
         """
         params = ''
         if comment: params += ' Comment="%s"' % comment
@@ -230,6 +235,10 @@ class IOSXR:
         """
         Commits the candidate config to the device, by replacing the existing
         one.
+        
+        :param comment:   User comment saved on this commit on the device
+        :param label:     User label saved on this commit on the device
+        :param confirmed: Commit with auto-rollback if new commit is not made in 30 to 300 sec
         """
         params = ''
         if comment: params += ' Comment="%s"' % comment
