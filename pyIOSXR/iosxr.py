@@ -16,7 +16,7 @@ import re
 import sys
 import difflib
 import pexpect
-from exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError
+from exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError, IteratorIDError
 
 import xml.etree.ElementTree as ET
 
@@ -37,6 +37,12 @@ def __execute_rpc__(device, rpc_command, timeout):
     response = re.sub('^[^<]*', '', response_assembled)
 
     root = ET.fromstring(response)
+    if 'IteratorID' in root.attrib:
+        raise IteratorIDError("Non supported IteratorID in Response object. \
+Turn iteration off on your XML agent by configuring 'xml agent [tty | ssl] iteration off'. \
+For more information refer to http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/iosxr_r4-1/xml/programming/guide/xl41apidoc.pdf, \
+7-99.Turn iteration off on your XML agent.")
+        
     childs = [x.tag for x in list(root)]
 
     if int(root.find('ResultSummary').get('ErrorCount')) > 0:
