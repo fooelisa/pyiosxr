@@ -61,7 +61,7 @@ configuration, call commit_config():
 +interface TenGigE0/0/0/21
 + description testing-xml-from-the-other-file
 +!
->>> device.commit_config()
+>>> device.commit_config(label='my label', comment='my comment')
 ```
 
 ### Commit Replace Config
@@ -70,7 +70,7 @@ call commit_replace_config():
 ```python
 >>> device.load_candidate_config(filename='unit/test/full_config.txt')
 >>> device.compare_replace_config()
->>> device.commit_replace_config()
+>>> device.commit_replace_config(label='my label', comment='my comment')
 ```
 
 ### Rollback Config
