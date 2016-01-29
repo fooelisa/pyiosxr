@@ -211,6 +211,9 @@ class IOSXR:
         """
         Commits the candidate config to the device, by merging it with the
         existing one.
+
+        :param label:   Commit label, displayed instead of the commit ID on the device.
+        :param comment: Commit comment, displayed in the commit entry on the device.
         """
         rpc_command = '<Commit'
         if label: 
@@ -220,12 +223,20 @@ class IOSXR:
         rpc_command += '/>'
         response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
-    def commit_replace_config(self):
+    def commit_replace_config(self, label=None, comment=None):
         """
         Commits the candidate config to the device, by replacing the existing
         one.
+
+        :param label:   Commit label, displayed instead of the commit ID on the device.
+        :param comment: Commit comment, displayed in the commit entry on the device.
         """
-        rpc_command = '<Commit Replace="true"/>'
+        rpc_command = '<Commit Replace="true"'
+        if label:
+            rpc_command += ' Label="%s"' % label
+        if comment:
+            rpc_command += ' Comment="%s"' % comment
+        rpc_command += '/>'
         response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
     def discard_config(self):
