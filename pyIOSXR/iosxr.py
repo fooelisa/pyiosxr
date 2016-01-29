@@ -45,7 +45,9 @@ For more information refer to http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/ios
         
     childs = [x.tag for x in list(root)]
 
-    if int(root.find('ResultSummary').get('ErrorCount')) > 0:
+    result_summary = root.find('ResultSummary')
+
+    if result_summary is not None and int(result_summary.get('ErrorCount', 0)) > 0:
 
         if 'CLI' in childs:
             error_msg = root.find('CLI').get('ErrorMsg') or ''
