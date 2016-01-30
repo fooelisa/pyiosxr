@@ -74,7 +74,7 @@ within the time spesified to acknowledge the commit or else it rolls back your c
 (comment and label is optional parameters)
 ```python
 >>> device.load_candidate_config(filename='unit/test/other_config.txt')
->>> device.commit_config(comment='comment saved on device', label='label', confirmed=30)
+>>> device.commit_config(label='my label', comment='my comment', confirmed=30)
 .... Code to do checks etc ....
 >>> device.commit_config()
 ```
