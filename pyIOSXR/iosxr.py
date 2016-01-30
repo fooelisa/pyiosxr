@@ -16,7 +16,7 @@ import re
 import sys
 import difflib
 import pexpect
-from exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError
+from exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError, IteratorIDError
 
 import xml.etree.ElementTree as ET
 
@@ -39,9 +39,17 @@ def __execute_rpc__(device, rpc_command, timeout):
     response = re.sub('^[^<]*', '', response_assembled)
 
     root = ET.fromstring(response)
+    if 'IteratorID' in root.attrib:
+        raise IteratorIDError("Non supported IteratorID in Response object. \
+Turn iteration off on your XML agent by configuring 'xml agent [tty | ssl] iteration off'. \
+For more information refer to http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/iosxr_r4-1/xml/programming/guide/xl41apidoc.pdf, \
+7-99.Turn iteration off on your XML agent.")
+        
     childs = [x.tag for x in list(root)]
 
-    if int(root.find('ResultSummary').get('ErrorCount')) > 0:
+    result_summary = root.find('ResultSummary')
+
+    if result_summary is not None and int(result_summary.get('ErrorCount', 0)) > 0:
 
         if 'CLI' in childs:
             error_msg = root.find('CLI').get('ErrorMsg') or ''
@@ -211,27 +219,29 @@ class IOSXR:
 
         return ''.join(diff.splitlines(1)[2:-2])
 
-    def commit_config(self, comment=None, label=None, confirmed=None):
+    def commit_config(self, label=None, comment=None, confirmed=None):
         """
         Commits the candidate config to the device, by merging it with the
         existing one.
         
-        :param comment:   User comment saved on this commit on the device
-        :param label:     User label saved on this commit on the device
+        :param label:     Commit comment, displayed in the commit entry on the device.
+        :param comment:   Commit label, displayed instead of the commit ID on the device.
         :param confirmed: Commit with auto-rollback if new commit is not made in 30 to 300 sec
         """
-        params = ''
-        if comment: params += ' Comment="%s"' % comment
-        if label:   params += ' Label="%s"' % label
-        if confirmed: 
-            if 30 <= int(confirmed) <= 300: 
-                params += ' Confirmed="%d"' % int(confirmed)
-            else: raise InvalidInputError('confirmed needs to be between 30 and 300') 
+        rpc_command = '<Commit'
+        if label:
+            rpc_command += ' Label="%s"' % label
+        if comment:
+            rpc_command += ' Comment="%s"' % comment
+        if confirmed:
+            if 30 <= int(confirmed) <= 300:
+                rpc_command += ' Confirmed="%d"' % int(confirmed)
+            else: raise InvalidInputError('confirmed needs to be between 30 and 300')
+        rpc_command += '/>'
 
-        rpc_command = '<Commit%s/>' % params
         response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
-    def commit_replace_config(self, comment=None, label=None, confirmed=None):
+    def commit_replace_config(self, label=None, comment=None, confirmed=None):
         """
         Commits the candidate config to the device, by replacing the existing
         one.

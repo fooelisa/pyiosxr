@@ -62,7 +62,7 @@ configuration, call commit_config():
 +interface TenGigE0/0/0/21
 + description testing-xml-from-the-other-file
 +!
->>> device.commit_config(comment='comment saved on device', label='label')
+>>> device.commit_config(label='my label', comment='my comment')
 ```
 
 ### Merge Config with Timer based autorollback

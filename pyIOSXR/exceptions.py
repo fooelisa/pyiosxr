@@ -26,3 +26,6 @@ class TimeoutError(Exception):
 
 class EOFError(Exception):
     pass
+
+class IteratorIDError(Exception):
+	pass
