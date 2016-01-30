@@ -250,15 +250,16 @@ class IOSXR:
         :param label:     User label saved on this commit on the device
         :param confirmed: Commit with auto-rollback if new commit is not made in 30 to 300 sec
         """
-        params = ''
-        if comment: params += ' Comment="%s"' % comment
-        if label:   params += ' Label="%s"' % label
-        if confirmed: 
+       rpc_command = '<Commit Replace="true"'
+        if label:
+            rpc_command += ' Label="%s"' % label
+        if comment:
+            rpc_command += ' Comment="%s"' % comment
+        if confirmed:
             if 30 <= int(confirmed) <= 300:
-                params += ' Confirmed="%d"' % int(confirmed)
-            else: raise InvalidInputError('confirmed needs to be between 30 and 300') 
-
-        rpc_command = '<Commit Replace="true"%s/>' % params
+                rpc_command += ' Confirmed="%d"' % int(confirmed)
+            else: raise InvalidInputError('confirmed needs to be between 30 and 300')
+        rpc_command += '/>'
         response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
     def discard_config(self):
