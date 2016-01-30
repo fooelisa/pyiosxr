@@ -86,7 +86,7 @@ call commit_replace_config():
 ```python
 >>> device.load_candidate_config(filename='unit/test/full_config.txt')
 >>> device.compare_replace_config()
->>> device.commit_replace_config(comment='comment saved to device', label='label')
+>>> device.commit_replace_config(label='my label', comment='my comment')
 ```
 
 ### Rollback Config

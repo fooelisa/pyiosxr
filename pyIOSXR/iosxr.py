@@ -250,7 +250,7 @@ class IOSXR:
         :param label:     User label saved on this commit on the device
         :param confirmed: Commit with auto-rollback if new commit is not made in 30 to 300 sec
         """
-       rpc_command = '<Commit Replace="true"'
+        rpc_command = '<Commit Replace="true"'
         if label:
             rpc_command += ' Label="%s"' % label
         if comment:
