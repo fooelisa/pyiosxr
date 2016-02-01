@@ -137,15 +137,16 @@ class IOSXR:
         """
         device = pexpect.spawn('ssh -o ConnectTimeout={} -p {} {}@{}'.format(self.timeout, self.port, self.username, self.hostname), logfile=self.logfile)
         try:
-            index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF], timeout = self.timeout)
+            index = device.expect(['\(yes\/no\)\?', 'password:', '#', pexpect.EOF], timeout = self.timeout)
             if index == 0:
                 device.sendline('yes')
-                index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF], timeout = self.timeout)
+                index = device.expect(['\(yes\/no\)\?', 'password:', '#', pexpect.EOF], timeout = self.timeout)
             if index == 1:
                 device.sendline(self.password)
-            elif index == 2:
+            elif index == 3:
                 pass
-            device.expect('#', timeout = self.timeout)
+            if index != 2:
+                device.expect('#', timeout = self.timeout)
             device.sendline('xml')
             index = device.expect(['XML>', 'ERROR: 0x24319600'], timeout = self.timeout)
             if index == 1:
