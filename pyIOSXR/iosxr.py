@@ -26,7 +26,9 @@ def __execute_rpc__(device, rpc_command, timeout):
     rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">'+rpc_command+'</Request>'
     try:
         device.sendline(rpc_command)
-        device.expect_exact("</Response>", timeout = timeout)
+        index = device.expect_exact(["</Response>","ERROR: 0xa240fe00"], timeout = timeout)
+        if index == 1:
+            raise XMLCLIError('The XML document is not well-formed')
     except pexpect.TIMEOUT as e:
         raise TimeoutError("pexpect timeout error")
     except pexpect.EOF as e:
@@ -85,7 +87,7 @@ def __execute_config_show__(device, show_command, timeout):
 
 class IOSXR:
 
-    def __init__(self, hostname, username, password, port=22, timeout=60):
+    def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None):
         """
         A device running IOS-XR.
 
@@ -94,12 +96,14 @@ class IOSXR:
         :param password:  Password
         :param port:      SSH Port (default: 22)
         :param timeout:   Timeout (default: 60 sec)
+        :param logfile:   File-like object to save device communication to or None to disable logging
         """
         self.hostname = hostname
         self.username = username
         self.password = password
         self.port     = port
         self.timeout  = timeout
+        self.logfile  = logfile
 
     def __getattr__(self, item):
         """
@@ -131,7 +135,7 @@ class IOSXR:
         """
         Opens a connection to an IOS-XR device.
         """
-        device = pexpect.spawn('ssh -o ConnectTimeout={} -p {} {}@{}'.format(self.timeout, self.port, self.username, self.hostname))
+        device = pexpect.spawn('ssh -o ConnectTimeout={} -p {} {}@{}'.format(self.timeout, self.port, self.username, self.hostname), logfile=self.logfile)
         try:
             index = device.expect(['\(yes\/no\)\?', 'password:', pexpect.EOF], timeout = self.timeout)
             if index == 0:
@@ -215,35 +219,46 @@ class IOSXR:
 
         return ''.join(diff.splitlines(1)[2:-2])
 
-    def commit_config(self, label=None, comment=None):
+    def commit_config(self, label=None, comment=None, confirmed=None):
         """
         Commits the candidate config to the device, by merging it with the
         existing one.
-
-        :param label:   Commit label, displayed instead of the commit ID on the device.
-        :param comment: Commit comment, displayed in the commit entry on the device.
+        
+        :param label:     Commit comment, displayed in the commit entry on the device.
+        :param comment:   Commit label, displayed instead of the commit ID on the device.
+        :param confirmed: Commit with auto-rollback if new commit is not made in 30 to 300 sec
         """
         rpc_command = '<Commit'
-        if label: 
+        if label:
             rpc_command += ' Label="%s"' % label
-        if comment: 
+        if comment:
             rpc_command += ' Comment="%s"' % comment
+        if confirmed:
+            if 30 <= int(confirmed) <= 300:
+                rpc_command += ' Confirmed="%d"' % int(confirmed)
+            else: raise InvalidInputError('confirmed needs to be between 30 and 300')
         rpc_command += '/>'
+
         response = __execute_rpc__(self.device, rpc_command, self.timeout)
 
-    def commit_replace_config(self, label=None, comment=None):
+    def commit_replace_config(self, label=None, comment=None, confirmed=None):
         """
         Commits the candidate config to the device, by replacing the existing
         one.
-
-        :param label:   Commit label, displayed instead of the commit ID on the device.
-        :param comment: Commit comment, displayed in the commit entry on the device.
+        
+        :param comment:   User comment saved on this commit on the device
+        :param label:     User label saved on this commit on the device
+        :param confirmed: Commit with auto-rollback if new commit is not made in 30 to 300 sec
         """
         rpc_command = '<Commit Replace="true"'
         if label:
             rpc_command += ' Label="%s"' % label
         if comment:
             rpc_command += ' Comment="%s"' % comment
+        if confirmed:
+            if 30 <= int(confirmed) <= 300:
+                rpc_command += ' Confirmed="%d"' % int(confirmed)
+            else: raise InvalidInputError('confirmed needs to be between 30 and 300')
         rpc_command += '/>'
         response = __execute_rpc__(self.device, rpc_command, self.timeout)
 

@@ -52,6 +52,7 @@ call discard_config():
 ### Load, Compare and Merge Config
 If you want to commit the loaded configuration and merge it with the existing 
 configuration, call commit_config():
+(comment and label is optional parameters)
 ```python
 >>> device.load_candidate_config(filename='unit/test/other_config.txt')
 >>> device.compare_config()
@@ -64,9 +65,24 @@ configuration, call commit_config():
 >>> device.commit_config(label='my label', comment='my comment')
 ```
 
+### Merge Config with Timer based autorollback
+If you want to commit the loaded configuration with a timed autorollback that
+needs to be confirmed use the confirmed= keyword on the commit, parameters is
+seconds to wait before autorollback, values from 30 to 300sec.
+when using confirmed= you need to do another commit_config() without parameters
+within the time spesified to acknowledge the commit or else it rolls back your changes.
+(comment and label is optional parameters)
+```python
+>>> device.load_candidate_config(filename='unit/test/other_config.txt')
+>>> device.commit_config(label='my label', comment='my comment', confirmed=30)
+.... Code to do checks etc ....
+>>> device.commit_config()
+```
+
 ### Commit Replace Config
 If you would rather commit the config by replacing the existing configuration,
 call commit_replace_config():
+(comment and label is optional parameters)
 ```python
 >>> device.load_candidate_config(filename='unit/test/full_config.txt')
 >>> device.compare_replace_config()
@@ -102,6 +118,22 @@ Call close() to close the connection to the device:
 ```python
 >>> device.close()
 ```
+
+### Debugging Connection
+create a logfile of the communication between pyIOSXR and the router.
+```python
+>>> from pyIOSXR import IOSXR
+>>> import sys
+>>> device=IOSXR(hostname="router", username="cisco", password="cisco", port=22, timeout=120, logfile=sys.stdout)
+
+OR
+
+>>> from pyIOSXR import IOSXR
+>>> import sys
+>>> file = open("logfile.log")
+>>> device=IOSXR(hostname="router", username="cisco", password="cisco", port=22, timeout=120, logfile=file)
+```
+
 
 Thanks
 ======
