@@ -87,22 +87,23 @@ def __execute_config_show__(device, show_command, timeout):
 
 class IOSXR:
 
-    def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None, lock = True):
+    def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None, lock=True):
         """
         A device running IOS-XR.
 
-        :param hostname:  IP or FQDN of the device you want to connect to
-        :param username:  Username
-        :param password:  Password
-        :param port:      SSH Port (default: 22)
-        :param timeout:   Timeout (default: 60 sec)
+        :param hostname:  (str) IP or FQDN of the device you want to connect to
+        :param username:  (str) Username
+        :param password:  (str) Password
+        :param port:      (int) SSH Port (default: 22)
+        :param timeout:   (int) Timeout (default: 60 sec)
         :param logfile:   File-like object to save device communication to or None to disable logging
+        :param lock:      (bool) Auto-lock config upon open() if set to True, connect without locking if False (default: True)
         """
-        self.hostname = hostname
-        self.username = username
-        self.password = password
-        self.port     = port
-        self.timeout  = timeout
+        self.hostname = str(hostname)
+        self.username = str(username)
+        self.password = str(password)
+        self.port     = int(port)
+        self.timeout  = int(timeout)
         self.logfile  = logfile
         self.lock_on_connect = lock
         self.locked   = False
@@ -170,14 +171,18 @@ class IOSXR:
         self.device.close()
 
     def lock(self):
-
+        """
+        Locks the IOS-XR device config.
+        """
         if not self.locked:
             rpc_command = '<Lock/>'
             response = __execute_rpc__(self.device, rpc_command, self.timeout)
             self.locked = True
 
     def unlock(self):
-
+        """
+        Unlocks the IOS-XR device config.
+        """
         if self.locked:
             rpc_command = '<Unlock/>'
             response = __execute_rpc__(self.device, rpc_command, self.timeout)
