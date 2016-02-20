@@ -19,7 +19,7 @@ Documentation
 =============
 
 ### Connect and lock config
-Connect to an IOS-XR device:
+Connect to an IOS-XR device and auto-lock config:
 ```python
 >>> from pyIOSXR import IOSXR
 >>> device = IOSXR(hostname='lab001', username='ejasinska', password='passwd', port=22, timeout=120)
@@ -27,7 +27,7 @@ Connect to an IOS-XR device:
 ```
 
 ### Connect without auto-lock
-Connect to an IOS-XR device:
+Connect to an IOS-XR device withoug locking the config:
 ```python
 >>> from pyIOSXR import IOSXR
 >>> device = IOSXR(hostname='lab001', username='ejasinska', password='passwd', port=22, timeout=120, lock=False)
@@ -36,6 +36,7 @@ Connect to an IOS-XR device:
 
 ### Lock and unlock manually
 ```python
+If we connected to the device without locking the config, we might want to lock/unlock it later:
 >>> device.lock()
 >>> ...
 >>> device.unlock()
@@ -135,7 +136,7 @@ Call close() to close the connection to the device:
 ```
 
 ### Debugging Connection
-create a logfile of the communication between pyIOSXR and the router.
+Log the communication between pyIOSXR and the router to any file-like like stdout, or an actual file:
 ```python
 >>> from pyIOSXR import IOSXR
 >>> import sys
