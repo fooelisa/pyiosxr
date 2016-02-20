@@ -44,7 +44,7 @@ def __execute_rpc__(device, rpc_command, timeout):
 Turn iteration off on your XML agent by configuring 'xml agent [tty | ssl] iteration off'. \
 For more information refer to http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/iosxr_r4-1/xml/programming/guide/xl41apidoc.pdf, \
 7-99.Turn iteration off on your XML agent.")
-        
+
     childs = [x.tag for x in list(root)]
 
     result_summary = root.find('ResultSummary')
@@ -87,7 +87,7 @@ def __execute_config_show__(device, show_command, timeout):
 
 class IOSXR:
 
-    def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None):
+    def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None, lock = True):
         """
         A device running IOS-XR.
 
@@ -104,6 +104,8 @@ class IOSXR:
         self.port     = port
         self.timeout  = timeout
         self.logfile  = logfile
+        self.lock_on_connect = lock
+        self.locked   = False
 
     def __getattr__(self, item):
         """
@@ -155,16 +157,30 @@ class IOSXR:
         except pexpect.EOF as e:
             raise EOFError("pexpect EOF error")
         self.device = device
-        rpc_command = '<Lock/>'
-        response = __execute_rpc__(self.device, rpc_command, self.timeout)
+        if self.lock_on_connect:
+            self.lock()
 
     def close(self):
         """
         Closes the connection to the IOS-XR device.
         """
-        rpc_command = '<Unlock/>'
-        response = __execute_rpc__(self.device, rpc_command, self.timeout)
+        if self.lock_on_connect or self.locked:
+            self.unlock()
         self.device.close()
+
+    def lock(self):
+
+        if not self.locked:
+            rpc_command = '<Lock/>'
+            response = __execute_rpc__(self.device, rpc_command, self.timeout)
+            self.locked = True
+
+    def unlock(self):
+
+        if self.locked:
+            rpc_command = '<Unlock/>'
+            response = __execute_rpc__(self.device, rpc_command, self.timeout)
+            self.locked = False
 
     def load_candidate_config(self, filename=None, config=None):
         """
@@ -223,7 +239,7 @@ class IOSXR:
         """
         Commits the candidate config to the device, by merging it with the
         existing one.
-        
+
         :param label:     Commit comment, displayed in the commit entry on the device.
         :param comment:   Commit label, displayed instead of the commit ID on the device.
         :param confirmed: Commit with auto-rollback if new commit is not made in 30 to 300 sec
@@ -245,7 +261,7 @@ class IOSXR:
         """
         Commits the candidate config to the device, by replacing the existing
         one.
-        
+
         :param comment:   User comment saved on this commit on the device
         :param label:     User label saved on this commit on the device
         :param confirmed: Commit with auto-rollback if new commit is not made in 30 to 300 sec
