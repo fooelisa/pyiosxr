@@ -18,12 +18,27 @@ pip install pyIOSXR
 Documentation
 =============
 
-### Connect
+### Connect and lock config
 Connect to an IOS-XR device:
 ```python
 >>> from pyIOSXR import IOSXR
 >>> device = IOSXR(hostname='lab001', username='ejasinska', password='passwd', port=22, timeout=120)
 >>> device.open()
+```
+
+### Connect without auto-lock
+Connect to an IOS-XR device:
+```python
+>>> from pyIOSXR import IOSXR
+>>> device = IOSXR(hostname='lab001', username='ejasinska', password='passwd', port=22, timeout=120, lock=False)
+>>> device.open()
+```
+
+### Lock and unlock manually
+```python
+>>> device.lock()
+>>> ...
+>>> device.unlock()
 ```
 
 ### Load and Compare Config
@@ -71,7 +86,7 @@ needs to be confirmed use the confirmed= keyword on the commit, parameters is
 seconds to wait before autorollback, values from 30 to 300sec.
 when using confirmed= you need to do another commit_config() without parameters
 within the time spesified to acknowledge the commit or else it rolls back your changes.
-(comment and label is optional parameters)
+(comment and label are optional parameters)
 ```python
 >>> device.load_candidate_config(filename='unit/test/other_config.txt')
 >>> device.commit_config(label='my label', comment='my comment', confirmed=30)
@@ -133,7 +148,6 @@ OR
 >>> file = open("logfile.log")
 >>> device=IOSXR(hostname="router", username="cisco", password="cisco", port=22, timeout=120, logfile=file)
 ```
-
 
 Thanks
 ======
