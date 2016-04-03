@@ -8,5 +8,4 @@ install:
   - pip install .
 
 script:
-  - cd test
-#  - test/test.py
+  - test/test.py
