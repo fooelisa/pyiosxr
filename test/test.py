@@ -4,6 +4,7 @@ import sys
 import mock
 import unittest
 
+import pexpect
 from pyIOSXR import IOSXR
 from pyIOSXR.exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError, IteratorIDError
 
@@ -15,7 +16,6 @@ from pyIOSXR.exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOF
 # test class IOSXR
 #     def __getattr__(self, item):
 #     def make_rpc_call(self, rpc_command):
-#     def open(self):
 #     def close(self):
 #     def lock(self):
 #     def unlock(self):
@@ -30,7 +30,7 @@ from pyIOSXR.exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOF
 
 #     def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None, lock=True):
 
-class Test__init__(unittest.TestCase):
+class TestInit(unittest.TestCase):
 
     def test_init(self):
         '''
@@ -58,7 +58,7 @@ class Test__init__(unittest.TestCase):
         Test pyiosxr class init - log to file
         Should return True
         '''
-        self.assertTrue(IOSXR(hostname='hostname', username='ejasinska', password='passwd', logfile='filename'))
+        self.assertTrue(IOSXR(hostname='hostname', username='ejasinska', password='passwd', logfile='filehandle'))
 
     def test_init_port(self):
         '''
@@ -73,6 +73,68 @@ class Test__init__(unittest.TestCase):
         Should return True
         '''
         self.assertTrue(IOSXR(hostname='hostname', username='ejasinska', password='passwd', timeout=120))
+
+
+#     def open(self):
+
+class TestOpen(unittest.TestCase):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn')
+    @mock.patch('pyIOSXR.iosxr.IOSXR.lock')
+    def test_open(self, mock_lock, mock_spawn):
+        '''
+        Test pyiosxr class open
+        Should return None
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
+        self.assertIsNone(device.open())
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn')
+    def test_open_no_lock(self, mock_spawn):
+        '''
+        Test pyiosxr class open - without lock
+        Should return None
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        self.assertIsNone(device.open())
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    def test_open_TimeoutError(self, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class open - raising pexpect.TIMEOUT
+        Should return TimeoutError
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
+        mock_spawn.return_value = None
+        mock_expect.side_effect = pexpect.TIMEOUT('error')
+        self.assertRaises(TimeoutError, device.open)
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    def test_open_EOFError(self, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class open - raising pexpect.EOF
+        Should return EOFError
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
+        mock_spawn.return_value = None
+        mock_expect.side_effect = pexpect.EOF('error')
+        self.assertRaises(EOFError, device.open)
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    def test_open_XMLCLIError(self, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class open - error as if XML not enabled on device: ERROR: 0x24319600
+        Should return XMLCLIError
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
+        mock_spawn.return_value = None
+        # expect returns 1 to raise XMLCLIError
+        mock_expect.return_value = 1
+        self.assertRaises(XMLCLIError, device.open)
 
 
 if __name__ == '__main__':
