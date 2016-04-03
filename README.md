@@ -1,6 +1,6 @@
-[![PyPI](https://img.shields.io/pypi/v/napalm.svg)](https://pypi.python.org/pypi/pyIOSXR)
-[![PyPI](https://img.shields.io/pypi/dm/napalm.svg)](https://pypi.python.org/pypi/pyIOSXR)
-[![Build Status](https://travis-ci.org/napalm-automation/napalm.svg?branch=master)](https://travis-ci.org/fooelisa/pyiosxr)
+[![PyPI](https://img.shields.io/pypi/v/pyiosxr.svg)](https://pypi.python.org/pypi/pyIOSXR)
+[![PyPI](https://img.shields.io/pypi/dm/pyiosxr.svg)](https://pypi.python.org/pypi/pyIOSXR)
+[![Build Status](https://travis-ci.org/fooelisa/pyiosxr.svg?branch=master)](https://travis-ci.org/fooelisa/pyiosxr)
 
 
 pyIOSXR
