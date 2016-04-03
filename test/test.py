@@ -16,16 +16,11 @@ from pyIOSXR.exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOF
 # test class IOSXR
 #     def __getattr__(self, item):
 #     def make_rpc_call(self, rpc_command):
-#     def close(self):
-#     def lock(self):
-#     def unlock(self):
 #     def load_candidate_config(self, filename=None, config=None):
 #     def compare_config(self):
 #     def compare_replace_config(self):
 #     def commit_config(self, label=None, comment=None, confirmed=None):
 #     def commit_replace_config(self, label=None, comment=None, confirmed=None):
-#     def discard_config(self):
-#     def rollback(self):
 
 
 #     def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None, lock=True):
@@ -135,6 +130,102 @@ class TestOpen(unittest.TestCase):
         # expect returns 1 to raise XMLCLIError
         mock_expect.return_value = 1
         self.assertRaises(XMLCLIError, device.open)
+
+
+#     def close(self):
+
+class TestClose(unittest.TestCase):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.close')
+    def test_close(self, mock_close, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class close
+        Should return None
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertIsNone(device.close())
+
+
+#     def lock(self):
+
+class TestLock(unittest.TestCase):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_lock(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class lock
+        Should return None
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertIsNone(device.lock())
+
+
+#     def unlock(self):
+
+class TestUnlock(unittest.TestCase):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.IOSXR.lock')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_unlock(self, mock_rpc, mock_lock, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class unlock
+        Should return None
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertIsNone(device.unlock())
+
+
+#     def discard_config(self):
+
+class TestDiscardConfig(unittest.TestCase):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_discard_config(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class discard_config
+        Should return None
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertIsNone(device.discard_config())
+
+
+#     def rollback(self):
+
+class TestRollback(unittest.TestCase):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_rollback(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class rollback
+        Should return None
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertIsNone(device.rollback())
 
 
 if __name__ == '__main__':
