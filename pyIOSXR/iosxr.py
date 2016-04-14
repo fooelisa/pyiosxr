@@ -193,6 +193,18 @@ class IOSXR:
             self.discard_config()
             raise InvalidInputError(e.message)
 
+
+    def get_candidate_config(self, merged=False):
+        """
+        Retrieve the configuration loaded as candidate config in your configuration session
+        """
+        if merged: 
+            command="show configuration merge"
+        else:
+            command="show configuration"
+        return __execute_config_show__(self.device, command, self.timeout)
+
+
     def compare_config(self):
         """
         Compares executed candidate config with the running config and
