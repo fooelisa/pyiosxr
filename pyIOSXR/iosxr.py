@@ -216,14 +216,19 @@ class IOSXR:
             raise InvalidInputError(e.message)
 
 
-    def get_candidate_config(self, merged=False):
+    def get_candidate_config(self, merge=False, formal=False):
         """
         Retrieve the configuration loaded as candidate config in your configuration session
+
+        :param merge:  Merge candidate config with running config to return 
+                       the complete configuration including all changed
+        :param formal: Return configuration in IOS-XR formal config format 
         """
-        if merged: 
-            command="show configuration merge"
-        else:
-            command="show configuration"
+        command="show configuration"
+        if merge: 
+            command+=" merge"
+        if formal:
+            command+=" formal"
         return __execute_config_show__(self.device, command, self.timeout)
 
 
