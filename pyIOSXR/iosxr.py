@@ -113,11 +113,28 @@ class IOSXR:
         Ok, David came up with this kind of dynamic method. It takes
         calls with show commands encoded in the name. I'll replacs the
         underscores for spaces and issues the show command... pretty neat!
+
+        non keyword params for show command:
+          all non keyword arguments is added to the command to allow dynamic parameters:
+          eks: .show_interface("GigabitEthernet0/0/0/0")
+
+        keyword params for show command:
+          config=True/False :   set True to run show command in config mode
+          eks: .show_configuration_merge(config=True)
+
         """
         def wrapper(*args, **kwargs):
             cmd = item.replace('_', ' ')
-            response = __execute_show__(self.device, cmd, self.timeout)
+            for arg in args: 
+                cmd += " %s" % arg
+                
+            if kwargs.get("config"):
+                response = __execute_config_show__(self.device, cmd, self.timeout)
+            else:
+                response = __execute_show__(self.device, cmd, self.timeout)
+                
             match = re.search(".*(!! IOS XR Configuration.*)</Exec>",response,re.DOTALL)
+           
             if match is not None:
                 response = match.group(1)
             return response
