@@ -1,3 +1,8 @@
+[![PyPI](https://img.shields.io/pypi/v/pyiosxr.svg)](https://pypi.python.org/pypi/pyIOSXR)
+[![PyPI](https://img.shields.io/pypi/dm/pyiosxr.svg)](https://pypi.python.org/pypi/pyIOSXR)
+[![Build Status](https://travis-ci.org/fooelisa/pyiosxr.svg?branch=master)](https://travis-ci.org/fooelisa/pyiosxr)
+
+
 pyIOSXR
 =====
 
@@ -18,12 +23,28 @@ pip install pyIOSXR
 Documentation
 =============
 
-### Connect
-Connect to an IOS-XR device:
+### Connect and lock config
+Connect to an IOS-XR device and auto-lock config:
 ```python
 >>> from pyIOSXR import IOSXR
 >>> device = IOSXR(hostname='lab001', username='ejasinska', password='passwd', port=22, timeout=120)
 >>> device.open()
+```
+
+### Connect without auto-lock
+Connect to an IOS-XR device withoug locking the config:
+```python
+>>> from pyIOSXR import IOSXR
+>>> device = IOSXR(hostname='lab001', username='ejasinska', password='passwd', port=22, timeout=120, lock=False)
+>>> device.open()
+```
+
+### Lock and unlock manually
+```python
+If we connected to the device without locking the config, we might want to lock/unlock it later:
+>>> device.lock()
+>>> ...
+>>> device.unlock()
 ```
 
 ### Load and Compare Config
@@ -71,7 +92,7 @@ needs to be confirmed use the confirmed= keyword on the commit, parameters is
 seconds to wait before autorollback, values from 30 to 300sec.
 when using confirmed= you need to do another commit_config() without parameters
 within the time spesified to acknowledge the commit or else it rolls back your changes.
-(comment and label is optional parameters)
+(comment and label are optional parameters)
 ```python
 >>> device.load_candidate_config(filename='unit/test/other_config.txt')
 >>> device.commit_config(label='my label', comment='my comment', confirmed=30)
@@ -120,7 +141,7 @@ Call close() to close the connection to the device:
 ```
 
 ### Debugging Connection
-create a logfile of the communication between pyIOSXR and the router.
+Log the communication between pyIOSXR and the router to any file-like like stdout, or an actual file:
 ```python
 >>> from pyIOSXR import IOSXR
 >>> import sys
@@ -133,7 +154,6 @@ OR
 >>> file = open("logfile.log")
 >>> device=IOSXR(hostname="router", username="cisco", password="cisco", port=22, timeout=120, logfile=file)
 ```
-
 
 Thanks
 ======
