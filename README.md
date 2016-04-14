@@ -61,6 +61,19 @@ be applied when committing the config:
 +!
 ```
 
+### Get current loaded candidate config
+Get the currently pending changes from the candidate configuration loaded by 
+load_candidate_config(). candidate can be merged with the current
+running configuration by applying the "merge" keyword
+```python
+>>> device.get_candidate_config(merge=False, formal=False)
+!! IOS XR Configuration 5.2.2
+interface GigabitEthernet0/0/0/0
+ description test
+!
+end
+```
+
 ### Discard Candidate Config
 If an already loaded configuration should be discarded without committing it,
 call discard_config():
@@ -125,6 +138,11 @@ embedded into the call:
 ...
 >>> device.show_interfaces()
 ...
+>>> device.show_interfaces("GigabitEthernet0/0/0/0")
+...
+>>> device.show_controller("GigabitEthernet0/0/0/0", "phy")
+...
+>>> device.show_configuration(config=True)
 ```
 
 ### Running XML Commands
