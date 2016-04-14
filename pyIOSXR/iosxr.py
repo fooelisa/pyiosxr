@@ -246,7 +246,14 @@ class IOSXR:
             command+=" merge"
         if formal:
             command+=" formal"
-        return __execute_config_show__(self.device, command, self.timeout)
+        response =  __execute_config_show__(self.device, command, self.timeout)
+
+        match = re.search(".*(!! IOS XR Configuration.*)$",response,re.DOTALL)
+        if match is not None:
+            response = match.group(1)
+
+
+        return response
 
 
     def compare_config(self):
