@@ -3,6 +3,7 @@
 import sys
 import mock
 import unittest
+import xml.etree.ElementTree as ET
 
 import pexpect
 from pyIOSXR import IOSXR
@@ -277,15 +278,16 @@ class TestMakeRpcCall(unittest.TestCase):
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
     @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_make_rpc_call((self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+    def test_make_rpc_call(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
         '''
         Test pyiosxr class make_rpc_call
         Should return True
         '''
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
         mock_spawn.return_value = None
+        mock_rpc.return_value = ET.fromstring('<xml></xml>')
         device.open()
-        self.assertIsNone(device.make_rpc_call("<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>"))
+        self.assertTrue(device.make_rpc_call("<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>"))
 
 ## XXX
 
