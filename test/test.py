@@ -7,20 +7,57 @@ import xml.etree.ElementTree as ET
 
 import pexpect
 from pyIOSXR import IOSXR
+from pyIOSXR.iosxr import __execute_show__, __execute_config_show__
 from pyIOSXR.exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError, IteratorIDError
 
 
 ## XXX TODO
 
+# test helpers
+
 # def __execute_rpc__(device, rpc_command, timeout):
+
+    # XXX
+
 # def __execute_show__(device, show_command, timeout):
+
+class TestExecuteShow(unittest.TestCase):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_execute_show(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr helper __execute_show__
+        Should return True
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertTrue(__execute_show__(device=device, show_command='show interfaces', timeout=10))
+
+
 # def __execute_config_show__(device, show_command, timeout):
 
+class TestExecuteConfigShow(unittest.TestCase):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_execute_config_show(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr helper __execute_config_show__
+        Should return True
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertTrue(__execute_config_show__(device=device, show_command='show interfaces', timeout=10))
+
+
 # test class IOSXR
-#     def __getattr__(self, item):
-
-## XXX
-
 
 #     def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None, lock=True):
 
@@ -68,6 +105,19 @@ class TestInit(unittest.TestCase):
         '''
         self.assertTrue(IOSXR(hostname='hostname', username='ejasinska', password='passwd', timeout=120))
 
+
+#     def __getattr__(self, item):
+
+class TestGetattr(unittest.TestCase):
+
+    def test_getattr(self):
+        '''
+        Test pyiosxr class getattr
+        Should return True
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        # XXX
+        self.assertTrue(True)
 
 #     def open(self):
 
