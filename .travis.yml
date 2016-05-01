@@ -1,11 +1,16 @@
 language: python
-
 python:
-    - 2.7
-
+- 2.7
 install:
-  - pip install -r requirements.txt
-  - pip install .
-
+- pip install -r requirements.txt
+- pip install .
 script:
-  - test/test.py
+- test/test.py
+deploy:
+  provider: pypi
+  user: fooelisa
+  password:
+    secure: HSBlC8yikWIzzGfR5RpRB8BTgHoHHMNQxD47oNUa8ZObBecObyMEMYauyki303EE6opxgqVxZ9U7IITiPaPVDkfSdZgC9tcgC9ipUqR+L00HX9MZ9fbMBVqbkhx8dpbTp8mbjCHBBm8OgczGLA5SsxuTG0jHlqKoZpYS5MjavIEWDmbLqBfIjycZxufSAAuEE0vYCBy8dLV1gr3Kbn5wD1B1STAyuesgLGsuPom2p+IxAlQZVj97FTu9bjYGdraYgxaXI9THmTMJ8h2D4QTDs8OZsPjFuQc6nHbuIMoO7j6G8MrDJvfW6BVifDEzy4tIuO0/XYB7pEiwd/vjPQbgFPYoY8qzenX3eiM1YX9Zm03rJNDYnCLgVdu5neHzpHpKytKzrls9mU0KaBBJWbXFohvuXm9S7DzDjbNFmRkMC+CJrN2HZKD+fFsBm8ka65ywKlE3ZZ9LPjRSMhz0OhHG+Fgqr3j/6m4deShKfcomiDT8gNRuKrZs6fBTy4N+JXqULqmotYYwdNeGT6f9z3LMuVsD+4e6BN4nauVjDX6fguq+2T741BEHI2nu8SKHmLHvy3L1atinQLRq7IoO3rjV3Z+4rWyldsaAoUsFnvUZvs26l35DyKvFNBxGp5FWD3sz7SXoUOd+P+uNIu3y6iMw6ZjSRCzLVsYUbAZN7fvTSL8=
+  on:
+    tags: true
+    branch: master

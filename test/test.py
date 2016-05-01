@@ -16,11 +16,6 @@ from pyIOSXR.exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOF
 # test class IOSXR
 #     def __getattr__(self, item):
 #     def make_rpc_call(self, rpc_command):
-#     def load_candidate_config(self, filename=None, config=None):
-#     def compare_config(self):
-#     def compare_replace_config(self):
-#     def commit_config(self, label=None, comment=None, confirmed=None):
-#     def commit_replace_config(self, label=None, comment=None, confirmed=None):
 
 
 #     def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None, lock=True):
@@ -226,6 +221,26 @@ class TestRollback(unittest.TestCase):
         mock_spawn.return_value = None
         device.open()
         self.assertIsNone(device.rollback())
+
+## XXX
+
+#     def load_candidate_config(self, filename=None, config=None):
+
+class TestLoadCandidateConfig(unittest.TestCase):
+
+    def test_load_candidate_config(self):
+        '''
+        Test pyiosxr class load_candidate_config
+        Should return None
+        '''
+        self.assertIsNone(device.load_candidate_config())
+
+
+#     def compare_config(self):
+#     def compare_replace_config(self):
+#     def commit_config(self, label=None, comment=None, confirmed=None):
+#     def commit_replace_config(self, label=None, comment=None, confirmed=None):
+#     def get_candidate_config(self, merge=False, formal=False):
 
 
 if __name__ == '__main__':
