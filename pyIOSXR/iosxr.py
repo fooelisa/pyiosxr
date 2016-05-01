@@ -125,16 +125,16 @@ class IOSXR:
         """
         def wrapper(*args, **kwargs):
             cmd = item.replace('_', ' ')
-            for arg in args: 
+            for arg in args:
                 cmd += " %s" % arg
-                
+
             if kwargs.get("config"):
                 response = __execute_config_show__(self.device, cmd, self.timeout)
             else:
                 response = __execute_show__(self.device, cmd, self.timeout)
-                
+
             match = re.search(".*(!! IOS XR Configuration.*)</Exec>",response,re.DOTALL)
-           
+
             if match is not None:
                 response = match.group(1)
             return response
@@ -232,17 +232,16 @@ class IOSXR:
             self.discard_config()
             raise InvalidInputError(e.message)
 
-
     def get_candidate_config(self, merge=False, formal=False):
         """
         Retrieve the configuration loaded as candidate config in your configuration session
 
-        :param merge:  Merge candidate config with running config to return 
+        :param merge:  Merge candidate config with running config to return
                        the complete configuration including all changed
-        :param formal: Return configuration in IOS-XR formal config format 
+        :param formal: Return configuration in IOS-XR formal config format
         """
         command="show configuration"
-        if merge: 
+        if merge:
             command+=" merge"
         if formal:
             command+=" formal"
@@ -252,9 +251,7 @@ class IOSXR:
         if match is not None:
             response = match.group(1)
 
-
         return response
-
 
     def compare_config(self):
         """

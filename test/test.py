@@ -338,13 +338,34 @@ class TestLoadCandidateConfig(unittest.TestCase):
         device.open()
         self.assertRaises(InvalidInputError, device.load_candidate_config, config='config')
 
+
+#     def get_candidate_config(self, merge=False, formal=False):
+
+class TestGetCandidateConfig(unittest.TestCase):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_config_show__')
+    def test_get_candidate_config(self, mock_config, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class make_rpc_call
+        Should return True
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        mock_config.return_value = '!! IOS XR Configuration'
+        self.assertTrue(device.get_candidate_config(merge=True, formal=True))
+
+
+
 ## XXX
 
 #     def compare_config(self):
 #     def compare_replace_config(self):
 #     def commit_config(self, label=None, comment=None, confirmed=None):
 #     def commit_replace_config(self, label=None, comment=None, confirmed=None):
-#     def get_candidate_config(self, merge=False, formal=False):
 
 ## XXX
 
