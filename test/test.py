@@ -110,12 +110,12 @@ class TestOpen(unittest.TestCase):
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
     def test_open_no_passwd(self, mock_sendline, mock_expect, mock_spawn):
         '''
-        Test pyiosxr class open - no passwd
+        Test pyiosxr class open - pexpect.EOF
         Should return Nona
         '''
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
         mock_spawn.return_value = None
-        mock_expect.return_value = 2
+        mock_expect.return_value = 3
         self.assertIsNone(device.open())
 
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
