@@ -6,8 +6,7 @@ install:
 - pip install .
 - pip install coveralls
 script:
-- test/test.py
-- coverage run -m pyIOSXR.iosxr test/test.py
+- coverage run --source pyIOSXR.iosxr test/test.py -v
 after_success:
   coveralls
 deploy:
