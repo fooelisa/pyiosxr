@@ -122,7 +122,7 @@ class TestGetattr(unittest.TestCase):
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
         mock_spawn.return_value = None
         device.open()
-        mock_show.return_value = '!! IOS XR Configuration'
+        mock_show.return_value = '!! IOS XR Configuration !@#$ </Exec>'
         self.assertTrue(device.show_interface("GigabitEthernet0/0/0/0"))
 
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
@@ -137,7 +137,7 @@ class TestGetattr(unittest.TestCase):
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
         mock_spawn.return_value = None
         device.open()
-        mock_show.return_value = '!! IOS XR Configuration'
+        mock_show.return_value = '!! IOS XR Configuration !@#$ </Exec>'
         self.assertTrue(device.show_configuration_merge(config=True))
 
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
