@@ -10,7 +10,7 @@ from pyIOSXR import IOSXR
 from pyIOSXR.exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError, IteratorIDError
 
 
-## XXX
+## XXX TODO
 
 # def __execute_rpc__(device, rpc_command, timeout):
 # def __execute_show__(device, show_command, timeout):
@@ -360,7 +360,42 @@ class TestGetCandidateConfig(unittest.TestCase):
 
 
 #     def compare_config(self):
+
+class TestCompareConfig(unittest.TestCase):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_config_show__')
+    def test_compare_config(self, mock_config, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class compare_config
+        Should return True
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        mock_config.return_value = ''
+        self.assertEqual('', device.compare_config())
+
+
 #     def compare_replace_config(self):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_config_show__')
+    def test_compare_replace_config(self, mock_config, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class compare_replace_config
+        Should return True
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        mock_config.return_value = ''
+        self.assertEqual('', device.compare_replace_config())
+
 
 #     def commit_config(self, label=None, comment=None, confirmed=None):
 
