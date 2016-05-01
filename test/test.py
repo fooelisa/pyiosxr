@@ -228,6 +228,7 @@ class TestUnlock(unittest.TestCase):
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
         mock_spawn.return_value = None
         device.open()
+        device.locked = True
         self.assertIsNone(device.unlock())
 
 
