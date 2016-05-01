@@ -113,11 +113,28 @@ class IOSXR:
         Ok, David came up with this kind of dynamic method. It takes
         calls with show commands encoded in the name. I'll replacs the
         underscores for spaces and issues the show command... pretty neat!
+
+        non keyword params for show command:
+          all non keyword arguments is added to the command to allow dynamic parameters:
+          eks: .show_interface("GigabitEthernet0/0/0/0")
+
+        keyword params for show command:
+          config=True/False :   set True to run show command in config mode
+          eks: .show_configuration_merge(config=True)
+
         """
         def wrapper(*args, **kwargs):
             cmd = item.replace('_', ' ')
-            response = __execute_show__(self.device, cmd, self.timeout)
+            for arg in args: 
+                cmd += " %s" % arg
+                
+            if kwargs.get("config"):
+                response = __execute_config_show__(self.device, cmd, self.timeout)
+            else:
+                response = __execute_show__(self.device, cmd, self.timeout)
+                
             match = re.search(".*(!! IOS XR Configuration.*)</Exec>",response,re.DOTALL)
+           
             if match is not None:
                 response = match.group(1)
             return response
@@ -214,6 +231,30 @@ class IOSXR:
         except InvalidInputError as e:
             self.discard_config()
             raise InvalidInputError(e.message)
+
+
+    def get_candidate_config(self, merge=False, formal=False):
+        """
+        Retrieve the configuration loaded as candidate config in your configuration session
+
+        :param merge:  Merge candidate config with running config to return 
+                       the complete configuration including all changed
+        :param formal: Return configuration in IOS-XR formal config format 
+        """
+        command="show configuration"
+        if merge: 
+            command+=" merge"
+        if formal:
+            command+=" formal"
+        response =  __execute_config_show__(self.device, command, self.timeout)
+
+        match = re.search(".*(!! IOS XR Configuration.*)$",response,re.DOTALL)
+        if match is not None:
+            response = match.group(1)
+
+
+        return response
+
 
     def compare_config(self):
         """
