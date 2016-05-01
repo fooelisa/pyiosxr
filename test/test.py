@@ -289,20 +289,26 @@ class TestMakeRpcCall(unittest.TestCase):
         device.open()
         self.assertTrue(device.make_rpc_call("<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>"))
 
-## XXX
 
 #     def load_candidate_config(self, filename=None, config=None):
 
-#class TestLoadCandidateConfig(unittest.TestCase):
-#
-#    def test_load_candidate_config(self):
-#        '''
-#        Test pyiosxr class load_candidate_config
-#        Should return None
-#        '''
-#        self.assertIsNone(device.load_candidate_config())
+class TestLoadCandidateConfig(unittest.TestCase):
 
-##
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_load_candidate_config(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class load_candidate_config
+        Should return None
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertIsNone(device.load_candidate_config(filename='test/config.txt'))
+
+## XXX
 
 #     def compare_config(self):
 #     def compare_replace_config(self):
