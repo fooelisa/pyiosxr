@@ -1,7 +1,7 @@
 [![PyPI](https://img.shields.io/pypi/v/pyiosxr.svg)](https://pypi.python.org/pypi/pyIOSXR)
 [![PyPI](https://img.shields.io/pypi/dm/pyiosxr.svg)](https://pypi.python.org/pypi/pyIOSXR)
 [![Build Status](https://travis-ci.org/fooelisa/pyiosxr.svg?branch=master)](https://travis-ci.org/fooelisa/pyiosxr)
-
+[![Coverage Status](https://coveralls.io/repos/github/fooelisa/pyiosxr/badge.svg?branch=master)](https://coveralls.io/github/fooelisa/pyiosxr?branch=master)
 
 pyIOSXR
 =====
