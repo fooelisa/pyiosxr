@@ -380,6 +380,20 @@ class TestCommitConfig(unittest.TestCase):
         device.open()
         self.assertIsNone(device.commit_config(label='label', comment='comment', confirmed=30))
 
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_commit_config_InvalidInputError(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class make_rpc_call
+        Should return True
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertRaises(InvalidInputError, device.commit_config, label='label', comment='comment', confirmed=900)
+
 
 #     def commit_replace_config(self, label=None, comment=None, confirmed=None):
 
