@@ -17,7 +17,6 @@ from pyIOSXR.exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOF
 
 # test class IOSXR
 #     def __getattr__(self, item):
-#     def make_rpc_call(self, rpc_command):
 
 ## XXX
 
@@ -268,6 +267,25 @@ class TestRollback(unittest.TestCase):
         mock_spawn.return_value = None
         device.open()
         self.assertIsNone(device.rollback())
+
+
+#     def make_rpc_call(self, rpc_command):
+
+class TestMakeRpcCall(unittest.TestCase):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_make_rpc_call((self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class make_rpc_call
+        Should return True
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertIsNone(device.make_rpc_call("<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>"))
 
 ## XXX
 
