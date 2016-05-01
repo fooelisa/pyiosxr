@@ -175,6 +175,22 @@ class TestClose(unittest.TestCase):
         device.open()
         self.assertIsNone(device.close())
 
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.close')
+    @mock.patch('pyIOSXR.iosxr.IOSXR.lock')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_close_locked(self, mock_rpc, mock_lock, mock_close, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class close with lock
+        Should return None
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertIsNone(device.close())
+
 
 #     def lock(self):
 
