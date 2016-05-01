@@ -360,6 +360,9 @@ class TestGetCandidateConfig(unittest.TestCase):
 
 
 #     def compare_config(self):
+#     def compare_replace_config(self):
+
+#     def commit_config(self, label=None, comment=None, confirmed=None):
 
 class TestCommitConfig(unittest.TestCase):
 
@@ -378,14 +381,23 @@ class TestCommitConfig(unittest.TestCase):
         self.assertIsNone(device.commit_config(label='label', comment='comment', confirmed=30))
 
 
-
-## XXX
-
-#     def compare_replace_config(self):
-#     def commit_config(self, label=None, comment=None, confirmed=None):
 #     def commit_replace_config(self, label=None, comment=None, confirmed=None):
 
-## XXX
+class TestCommitReplaceConfig(unittest.TestCase):
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_commit_replace_config(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class make_rpc_call
+        Should return True
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertIsNone(device.commit_replace_config(label='label', comment='comment', confirmed=30))
 
 
 if __name__ == '__main__':
