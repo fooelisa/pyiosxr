@@ -298,7 +298,7 @@ class TestLoadCandidateConfig(unittest.TestCase):
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
     @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_load_candidate_config(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+    def test_load_candidate_config_file(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
         '''
         Test pyiosxr class load_candidate_config
         Should return None
@@ -307,6 +307,36 @@ class TestLoadCandidateConfig(unittest.TestCase):
         mock_spawn.return_value = None
         device.open()
         self.assertIsNone(device.load_candidate_config(filename='test/config.txt'))
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_load_candidate_config(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class load_candidate_config
+        Should return None
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertIsNone(device.load_candidate_config(config='config'))
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.IOSXR.discard_config')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_load_candidate_config_InvalidInputError(self, mock_rpc, mock_discard, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class load_candidate_config
+        Should return None
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        mock_rpc.side_effect = InvalidInputError('error')
+        device.open()
+        self.assertRaises(InvalidInputError, device.load_candidate_config, config='config')
 
 ## XXX
 
