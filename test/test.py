@@ -110,14 +110,49 @@ class TestInit(unittest.TestCase):
 
 class TestGetattr(unittest.TestCase):
 
-    def test_getattr(self):
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_show__')
+    def test_getattr_show(self, mock_show, mock_sendline, mock_expect, mock_spawn):
         '''
         Test pyiosxr class getattr
         Should return True
         '''
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        # XXX
-        self.assertTrue(True)
+        mock_spawn.return_value = None
+        device.open()
+        mock_show.return_value = '!! IOS XR Configuration'
+        self.assertTrue(device.show_interface("GigabitEthernet0/0/0/0"))
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_config_show__')
+    def test_getattr_show_config(self, mock_show, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class getattr
+        Should return True
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        mock_show.return_value = '!! IOS XR Configuration'
+        self.assertTrue(device.show_configuration_merge(config=True))
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    def test_getattr_AttributeError(self, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class getattr
+        Should return AttributeError
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertRaises(AttributeError, getattr, device, 'foo')
+
 
 #     def open(self):
 
@@ -397,7 +432,7 @@ class TestGetCandidateConfig(unittest.TestCase):
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
     @mock.patch('pyIOSXR.iosxr.__execute_config_show__')
-    def test_get_candidate_config(self, mock_config, mock_sendline, mock_expect, mock_spawn):
+    def test_get_candidate_config(self, mock_show, mock_sendline, mock_expect, mock_spawn):
         '''
         Test pyiosxr class get_candidate_config
         Should return True
@@ -405,7 +440,7 @@ class TestGetCandidateConfig(unittest.TestCase):
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
         mock_spawn.return_value = None
         device.open()
-        mock_config.return_value = '!! IOS XR Configuration'
+        mock_show.return_value = '!! IOS XR Configuration'
         self.assertTrue(device.get_candidate_config(merge=True, formal=True))
 
 
@@ -417,7 +452,7 @@ class TestCompareConfig(unittest.TestCase):
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
     @mock.patch('pyIOSXR.iosxr.__execute_config_show__')
-    def test_compare_config(self, mock_config, mock_sendline, mock_expect, mock_spawn):
+    def test_compare_config(self, mock_show, mock_sendline, mock_expect, mock_spawn):
         '''
         Test pyiosxr class compare_config
         Should return True
@@ -425,7 +460,7 @@ class TestCompareConfig(unittest.TestCase):
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
         mock_spawn.return_value = None
         device.open()
-        mock_config.return_value = ''
+        mock_show.return_value = ''
         self.assertEqual('', device.compare_config())
 
 
@@ -435,7 +470,7 @@ class TestCompareConfig(unittest.TestCase):
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
     @mock.patch('pyIOSXR.iosxr.__execute_config_show__')
-    def test_compare_replace_config(self, mock_config, mock_sendline, mock_expect, mock_spawn):
+    def test_compare_replace_config(self, mock_show, mock_sendline, mock_expect, mock_spawn):
         '''
         Test pyiosxr class compare_replace_config
         Should return True
@@ -443,7 +478,7 @@ class TestCompareConfig(unittest.TestCase):
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
         mock_spawn.return_value = None
         device.open()
-        mock_config.return_value = ''
+        mock_show.return_value = ''
         self.assertEqual('', device.compare_replace_config())
 
 
