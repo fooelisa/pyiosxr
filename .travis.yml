@@ -4,8 +4,12 @@ python:
 install:
 - pip install -r requirements.txt
 - pip install .
+- pip install coveralls
 script:
 - test/test.py
+- coverage run -m pyIOSXR.iosxr test/test.py
+after_success:
+  coveralls
 deploy:
   provider: pypi
   user: fooelisa
