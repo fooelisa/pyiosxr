@@ -330,7 +330,7 @@ class TestLoadCandidateConfig(unittest.TestCase):
     def test_load_candidate_config_InvalidInputError(self, mock_rpc, mock_discard, mock_sendline, mock_expect, mock_spawn):
         '''
         Test pyiosxr class load_candidate_config
-        Should return None
+        Should return InvalidInputError
         '''
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
         mock_spawn.return_value = None
@@ -349,7 +349,7 @@ class TestGetCandidateConfig(unittest.TestCase):
     @mock.patch('pyIOSXR.iosxr.__execute_config_show__')
     def test_get_candidate_config(self, mock_config, mock_sendline, mock_expect, mock_spawn):
         '''
-        Test pyiosxr class make_rpc_call
+        Test pyiosxr class get_candidate_config
         Should return True
         '''
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
@@ -372,8 +372,8 @@ class TestCommitConfig(unittest.TestCase):
     @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
     def test_commit_config(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
         '''
-        Test pyiosxr class make_rpc_call
-        Should return True
+        Test pyiosxr class commit_config
+        Should return None
         '''
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
         mock_spawn.return_value = None
@@ -386,8 +386,8 @@ class TestCommitConfig(unittest.TestCase):
     @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
     def test_commit_config_InvalidInputError(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
         '''
-        Test pyiosxr class make_rpc_call
-        Should return True
+        Test pyiosxr class commit_config
+        Should return InvalidInputError
         '''
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
         mock_spawn.return_value = None
@@ -405,13 +405,27 @@ class TestCommitReplaceConfig(unittest.TestCase):
     @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
     def test_commit_replace_config(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
         '''
-        Test pyiosxr class make_rpc_call
-        Should return True
+        Test pyiosxr class commit_replace_config
+        Should return None
         '''
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
         mock_spawn.return_value = None
         device.open()
         self.assertIsNone(device.commit_replace_config(label='label', comment='comment', confirmed=30))
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
+    def test_commit_replace_config_InvalidInputError(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class commit_replace_config
+        Should return InvalidInputError
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        device.open()
+        self.assertRaises(InvalidInputError, device.commit_replace_config, label='label', comment='comment', confirmed=900)
 
 
 if __name__ == '__main__':
