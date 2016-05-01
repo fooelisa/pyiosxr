@@ -94,6 +94,32 @@ class TestOpen(unittest.TestCase):
 
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
     @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    def test_open_ssh_key_yes(self, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class open - with ssh key warning
+        Should return Nona
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        mock_expect.return_value = 0
+        self.assertIsNone(device.open())
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
+    def test_open_no_passwd(self, mock_sendline, mock_expect, mock_spawn):
+        '''
+        Test pyiosxr class open - no passwd
+        Should return Nona
+        '''
+        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
+        mock_spawn.return_value = None
+        mock_expect.return_value = 2
+        self.assertIsNone(device.open())
+
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
+    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
     def test_open_TimeoutError(self, mock_expect, mock_spawn):
         '''
         Test pyiosxr class open - raising pexpect.TIMEOUT
