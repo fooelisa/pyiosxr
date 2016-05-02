@@ -39,9 +39,9 @@ class TestExecuteRpc(unittest.TestCase):
         Should return True
         '''
         def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
             raise TimeoutError('error')
+        def expect_exact(foo, timeout):
+            pass
         device = mock.Mock()
         setattr(device, 'sendline', sendline)
         setattr(device, 'expect_exact', expect_exact)
@@ -53,9 +53,9 @@ class TestExecuteRpc(unittest.TestCase):
         Should return True
         '''
         def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
             raise EOFError('error')
+        def expect_exact(foo, timeout):
+            pass
         device = mock.Mock()
         setattr(device, 'sendline', sendline)
         setattr(device, 'expect_exact', expect_exact)
