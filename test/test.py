@@ -3,7 +3,7 @@
 import sys
 import mock
 import unittest
-import xml.etree.ElementTree as ET
+from xml.etree import ElementTree
 
 import pexpect
 from pyIOSXR import IOSXR
@@ -31,7 +31,7 @@ class TestExecuteRpc(unittest.TestCase):
         device = mock.Mock()
         setattr(device, 'sendline', sendline)
         setattr(device, 'expect_exact', expect_exact)
-        self.assertRaises(XMLCLIError, __execute_rpc__, device=device, rpc_command='<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>', timeout=10)
+        self.assertRaises(XMLCLIError, __execute_rpc__, device=device, rpc_command='<Get></Get>', timeout=10)
 
     def test_execute_rpc_TimeoutError(self):
         '''
@@ -45,7 +45,7 @@ class TestExecuteRpc(unittest.TestCase):
         device = mock.Mock()
         setattr(device, 'sendline', sendline)
         setattr(device, 'expect_exact', expect_exact)
-        self.assertRaises(TimeoutError, __execute_rpc__, device=device, rpc_command='<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>', timeout=10)
+        self.assertRaises(TimeoutError, __execute_rpc__, device=device, rpc_command='<Get></Get>', timeout=10)
 
     def test_execute_rpc_EOFError(self):
         '''
@@ -59,8 +59,151 @@ class TestExecuteRpc(unittest.TestCase):
         device = mock.Mock()
         setattr(device, 'sendline', sendline)
         setattr(device, 'expect_exact', expect_exact)
-        self.assertRaises(EOFError, __execute_rpc__, device=device, rpc_command='<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>', timeout=10)
+        self.assertRaises(EOFError, __execute_rpc__, device=device, rpc_command='<Get></Get>', timeout=10)
 
+    def test_execute_rpc_device_close_xml(self):
+        '''
+        Test pyiosxr helper __execute_rpc__ with responses from xml files
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            return 0
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        setattr(device, 'match', '')
+        setattr(device, 'before', open('test/device_close.xml').read())
+        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
+
+    def test_execute_rpc_device_commit_config_xml(self):
+        '''
+        Test pyiosxr helper __execute_rpc__ with responses from xml files
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            return 0
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        setattr(device, 'match', '')
+        setattr(device, 'before', open('test/device_commit_config.xml').read())
+        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
+
+    def test_execute_rpc_device_compare_config_xml(self):
+        '''
+        Test pyiosxr helper __execute_rpc__ with responses from xml files
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            return 0
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        setattr(device, 'match', '')
+        setattr(device, 'before', open('test/device_compare_config.xml').read())
+        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
+
+    def test_execute_rpc_device_discard_config_xml(self):
+        '''
+        Test pyiosxr helper __execute_rpc__ with responses from xml files
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            return 0
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        setattr(device, 'match', '')
+        setattr(device, 'before', open('test/device_discard_config.xml').read())
+        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
+
+    def test_execute_rpc_device_load_candidate_config_xml(self):
+        '''
+        Test pyiosxr helper __execute_rpc__ with responses from xml files
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            return 0
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        setattr(device, 'match', '')
+        setattr(device, 'before', open('test/device_load_candidate_config.xml').read())
+        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
+
+    def test_execute_rpc_device_make_rpc_call_xml(self):
+        '''
+        Test pyiosxr helper __execute_rpc__ with responses from xml files
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            return 0
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        setattr(device, 'match', '')
+        setattr(device, 'before', open('test/device_make_rpc_call.xml').read())
+        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
+
+    def test_execute_rpc_device_open_xml(self):
+        '''
+        Test pyiosxr helper __execute_rpc__ with responses from xml files
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            return 0
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        setattr(device, 'match', '')
+        setattr(device, 'before', open('test/device_open.xml').read())
+        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
+
+    def test_execute_rpc_device_rollback_xml(self):
+        '''
+        Test pyiosxr helper __execute_rpc__ with responses from xml files
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            return 0
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        setattr(device, 'match', '')
+        setattr(device, 'before', open('test/device_rollback.xml').read())
+        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
+
+    def test_execute_rpc_device_close_xml(self):
+        '''
+        Test pyiosxr helper __execute_rpc__ with responses from xml files
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            return 0
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        setattr(device, 'match', '')
+        setattr(device, 'before', open('test/device_show_interfaces.xml').read())
+        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
 
 # def __execute_show__(device, show_command, timeout):
 
@@ -413,7 +556,7 @@ class TestMakeRpcCall(unittest.TestCase):
         '''
         device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
         mock_spawn.return_value = None
-        mock_rpc.return_value = ET.fromstring('<xml></xml>')
+        mock_rpc.return_value = ElementTree.fromstring('<xml></xml>')
         device.open()
         self.assertTrue(device.make_rpc_call("<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>"))
 
