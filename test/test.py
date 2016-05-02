@@ -13,8 +13,6 @@ from pyIOSXR.iosxr import __execute_show__, __execute_config_show__, __execute_r
 from pyIOSXR.exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError, IteratorIDError
 
 
-## XXX TODO
-
 # test helpers
 
 # def __execute_rpc__(device, rpc_command, timeout):
@@ -24,7 +22,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_XMLCLIError(self):
         '''
         Test pyiosxr helper __execute_rpc__
-        Should return True
+        Should return XMLCLIError
         '''
         def sendline(foo):
             pass
@@ -38,7 +36,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_TimeoutError(self):
         '''
         Test pyiosxr helper __execute_rpc__
-        Should return True
+        Should return TimeoutError
         '''
         def sendline(foo):
             pass
@@ -52,7 +50,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_EOFError(self):
         '''
         Test pyiosxr helper __execute_rpc__
-        Should return True
+        Should return EOFError
         '''
         def sendline(foo):
             pass
@@ -66,7 +64,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_device_close_xml(self):
         '''
         Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return True
+        Should return ElementTree.Element object
         '''
         def sendline(foo):
             pass
@@ -82,7 +80,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_device_commit_config_xml(self):
         '''
         Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return True
+        Should return ElementTree.Element object
         '''
         def sendline(foo):
             pass
@@ -98,7 +96,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_device_compare_config_xml(self):
         '''
         Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return True
+        Should return ElementTree.Element object
         '''
         def sendline(foo):
             pass
@@ -114,7 +112,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_device_discard_config_xml(self):
         '''
         Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return True
+        Should return ElementTree.Element object
         '''
         def sendline(foo):
             pass
@@ -130,7 +128,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_device_load_candidate_config_xml(self):
         '''
         Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return True
+        Should return ElementTree.Element object
         '''
         def sendline(foo):
             pass
@@ -146,7 +144,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_device_make_rpc_call_xml(self):
         '''
         Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return True
+        Should return ElementTree.Element object
         '''
         def sendline(foo):
             pass
@@ -162,7 +160,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_device_open_xml(self):
         '''
         Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return True
+        Should return ElementTree.Element object
         '''
         def sendline(foo):
             pass
@@ -178,7 +176,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_device_rollback_xml(self):
         '''
         Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return True
+        Should return ElementTree.Element object
         '''
         def sendline(foo):
             pass
@@ -194,7 +192,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_device_close_xml(self):
         '''
         Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return True
+        Should return ElementTree.Element object
         '''
         def sendline(foo):
             pass
@@ -210,7 +208,7 @@ class TestExecuteRpc(unittest.TestCase):
     def test_execute_rpc_device_load_candidate_config_invalid_input_xml(self):
         '''
         Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return True
+        Should return InvalidInputError
         '''
         def sendline(foo):
             pass
@@ -222,6 +220,22 @@ class TestExecuteRpc(unittest.TestCase):
         setattr(device, 'match', '')
         setattr(device, 'before', open('test/device_load_candidate_config_invalid_input.xml').read())
         self.assertRaises(InvalidInputError, __execute_rpc__, device=device, rpc_command='<Get></Get>', timeout=10)
+
+    def test_execute_rpc_device_iterator_id_error_xml(self):
+        '''
+        Test pyiosxr helper __execute_rpc__ with responses from xml files
+        Should return IteratorIDError
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            return 0
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        setattr(device, 'match', '')
+        setattr(device, 'before', open('test/device_iterator_id_error.xml').read())
+        self.assertRaises(IteratorIDError, __execute_rpc__, device=device, rpc_command='<Get></Get>', timeout=10)
 
 
 # def __execute_show__(device, show_command, timeout):
