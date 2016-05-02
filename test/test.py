@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 import pexpect
 from pyIOSXR import IOSXR
-from pyIOSXR.iosxr import __execute_show__, __execute_config_show__
+from pyIOSXR.iosxr import __execute_show__, __execute_config_show__, __execute_rpc__
 from pyIOSXR.exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError, IteratorIDError
 
 
@@ -17,7 +17,50 @@ from pyIOSXR.exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOF
 
 # def __execute_rpc__(device, rpc_command, timeout):
 
-    # XXX
+class TestExecuteRpc(unittest.TestCase):
+
+    def test_execute_rpc_XMLCLIError(self):
+        '''
+        Test pyiosxr helper __execute_rpc__
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            return 1
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        self.assertRaises(XMLCLIError, __execute_rpc__, device=device, rpc_command='<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>', timeout=10)
+
+    def test_execute_rpc_TimeoutError(self):
+        '''
+        Test pyiosxr helper __execute_rpc__
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            raise TimeoutError('error')
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        self.assertRaises(TimeoutError, __execute_rpc__, device=device, rpc_command='<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>', timeout=10)
+
+    def test_execute_rpc_EOFError(self):
+        '''
+        Test pyiosxr helper __execute_rpc__
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            raise EOFError('error')
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        self.assertRaises(EOFError, __execute_rpc__, device=device, rpc_command='<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>', timeout=10)
+
 
 # def __execute_show__(device, show_command, timeout):
 
