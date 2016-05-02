@@ -205,6 +205,23 @@ class TestExecuteRpc(unittest.TestCase):
         setattr(device, 'before', open('test/device_show_interfaces.xml').read())
         self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
 
+    def test_execute_rpc_device_load_candidate_config_invalid_input_xml(self):
+        '''
+        Test pyiosxr helper __execute_rpc__ with responses from xml files
+        Should return True
+        '''
+        def sendline(foo):
+            pass
+        def expect_exact(foo, timeout):
+            return 0
+        device = mock.Mock()
+        setattr(device, 'sendline', sendline)
+        setattr(device, 'expect_exact', expect_exact)
+        setattr(device, 'match', '')
+        setattr(device, 'before', open('test/device_load_candidate_config_invalid_input.xml').read())
+        self.assertRaises(InvalidInputError, __execute_rpc__, device=device, rpc_command='<Get></Get>', timeout=10)
+
+
 # def __execute_show__(device, show_command, timeout):
 
 class TestExecuteShow(unittest.TestCase):
