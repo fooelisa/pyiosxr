@@ -1,4 +1,9 @@
+#!/usr/bin/env python
+# coding=utf-8
+"""A module to interact with Cisco devices running IOS-XR."""
+
 # Copyright 2015 Netflix. All rights reserved.
+# Copyright 2015 BigWaveIT. All rights reserved.
 #
 # The contents of this file are licensed under the Apache License, Version 2.0
 # (the "License"); you may not use this file except in compliance with the
@@ -13,7 +18,6 @@
 # the License.
 
 import re
-import sys
 import difflib
 import pexpect
 from exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError, IteratorIDError
@@ -23,18 +27,19 @@ import xml.etree.ElementTree as ET
 
 # Build and execute xml requests.
 def __execute_rpc__(device, rpc_command, timeout):
-    rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">'+rpc_command+'</Request>'
+    rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">' \
+                  + rpc_command + '</Request>'
     try:
         device.sendline(rpc_command)
-        index = device.expect_exact(["</Response>","ERROR: 0xa240fe00"], timeout = timeout)
+        index = device.expect_exact(["</Response>", "ERROR: 0xa240fe00"], timeout=timeout)
         if index == 1:
             raise XMLCLIError('The XML document is not well-formed')
-    except pexpect.TIMEOUT as e:
+    except pexpect.TIMEOUT:
         raise TimeoutError("pexpect timeout error")
-    except pexpect.EOF as e:
+    except pexpect.EOF:
         raise EOFError("pexpect EOF error")
 
-    #remove leading XML-agent prompt
+    # remove leading XML-agent prompt
     response_assembled = device.before+device.match
     response = re.sub('^[^<]*', '', response_assembled)
 
@@ -42,7 +47,8 @@ def __execute_rpc__(device, rpc_command, timeout):
     if 'IteratorID' in root.attrib:
         raise IteratorIDError("Non supported IteratorID in Response object. \
 Turn iteration off on your XML agent by configuring 'xml agent [tty | ssl] iteration off'. \
-For more information refer to http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/iosxr_r4-1/xml/programming/guide/xl41apidoc.pdf, \
+For more information refer to \
+http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/iosxr_r4-1/xml/programming/guide/xl41apidoc.pdf, \
 7-99.Turn iteration off on your XML agent.")
 
     childs = [x.tag for x in list(root)]
@@ -72,11 +78,13 @@ For more information refer to http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/ios
 
     return root
 
+
 # Ecexute show commands not in config context.
 def __execute_show__(device, show_command, timeout):
     rpc_command = '<CLI><Exec>'+show_command+'</Exec></CLI>'
     response = __execute_rpc__(device, rpc_command, timeout)
     return response.find('CLI').find('Exec').text.lstrip()
+
 
 # Ecexute show commands not in config context.
 def __execute_config_show__(device, show_command, timeout):
@@ -86,6 +94,7 @@ def __execute_config_show__(device, show_command, timeout):
 
 
 class IOSXR:
+    """A class to interact with Cisco devices running IOS-XR."""
 
     def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None, lock=True):
         """
@@ -97,30 +106,34 @@ class IOSXR:
         :param port:      (int) SSH Port (default: 22)
         :param timeout:   (int) Timeout (default: 60 sec)
         :param logfile:   File-like object to save device communication to or None to disable logging
-        :param lock:      (bool) Auto-lock config upon open() if set to True, connect without locking if False (default: True)
+        :param lock:      (bool) Auto-lock config upon open() if set to True, connect without locking if False
+                          (default: True)
         """
         self.hostname = str(hostname)
         self.username = str(username)
         self.password = str(password)
-        self.port     = int(port)
-        self.timeout  = int(timeout)
-        self.logfile  = logfile
+        self.port = int(port)
+        self.timeout = int(timeout)
+        self.logfile = logfile
         self.lock_on_connect = lock
-        self.locked   = False
+        self.locked = False
 
     def __getattr__(self, item):
         """
-        Ok, David came up with this kind of dynamic method. It takes
-        calls with show commands encoded in the name. I'll replacs the
-        underscores for spaces and issues the show command... pretty neat!
+        Dynamic getter to translate generic show commands.
+
+        David came up with this dynamic method. It takes
+        calls with show commands encoded in the name. I'll replace the
+        underscores for spaces and issues the show command on the device...
+        pretty neat!
 
         non keyword params for show command:
           all non keyword arguments is added to the command to allow dynamic parameters:
-          eks: .show_interface("GigabitEthernet0/0/0/0")
+          eg: .show_interface("GigabitEthernet0/0/0/0")
 
         keyword params for show command:
           config=True/False :   set True to run show command in config mode
-          eks: .show_configuration_merge(config=True)
+          eg: .show_configuration_merge(config=True)
 
         """
         def wrapper(*args, **kwargs):
@@ -133,7 +146,7 @@ class IOSXR:
             else:
                 response = __execute_show__(self.device, cmd, self.timeout)
 
-            match = re.search(".*(!! IOS XR Configuration.*)</Exec>",response,re.DOTALL)
+            match = re.search(".*(!! IOS XR Configuration.*)</Exec>", response, re.DOTALL)
 
             if match is not None:
                 response = match.group(1)
@@ -146,34 +159,40 @@ class IOSXR:
 
     def make_rpc_call(self, rpc_command):
         """
-        Allow a user to query a device directly using XML-requests
+        Allow a user to query a device directly using XML-requests.
+
+        :param rpc_command: (str) rpc command such as:
+                                  <Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>
         """
         result = __execute_rpc__(self.device, rpc_command, self.timeout)
         return ET.tostring(result)
 
     def open(self):
         """
-        Opens a connection to an IOS-XR device.
+        Open a connection to an IOS-XR device.
+
+        Connects to the device using SSH (pexpect) and drops into XML mode.
         """
-        device = pexpect.spawn('ssh -o ConnectTimeout={} -p {} {}@{}'.format(self.timeout, self.port, self.username, self.hostname), logfile=self.logfile)
+        device = pexpect.spawn('ssh -o ConnectTimeout={} -p {} {}@{}'.format(self.timeout, self.port, self.username,
+                               self.hostname), logfile=self.logfile)
         try:
-            index = device.expect(['\(yes\/no\)\?', 'password:', '#', pexpect.EOF], timeout = self.timeout)
+            index = device.expect(['\(yes\/no\)\?', 'password:', '#', pexpect.EOF], timeout=self.timeout)
             if index == 0:
                 device.sendline('yes')
-                index = device.expect(['\(yes\/no\)\?', 'password:', '#', pexpect.EOF], timeout = self.timeout)
+                index = device.expect(['\(yes\/no\)\?', 'password:', '#', pexpect.EOF], timeout=self.timeout)
             if index == 1:
                 device.sendline(self.password)
             elif index == 3:
                 pass
             if index != 2:
-                device.expect('#', timeout = self.timeout)
+                device.expect('#', timeout=self.timeout)
             device.sendline('xml')
-            index = device.expect(['XML>', 'ERROR: 0x24319600'], timeout = self.timeout)
+            index = device.expect(['XML>', 'ERROR: 0x24319600'], timeout=self.timeout)
             if index == 1:
                 raise XMLCLIError('XML TTY agent has not been started. Please configure \'xml agent tty\'.')
-        except pexpect.TIMEOUT as e:
+        except pexpect.TIMEOUT:
             raise TimeoutError("pexpect timeout error")
-        except pexpect.EOF as e:
+        except pexpect.EOF:
             raise EOFError("pexpect EOF error")
         self.device = device
         if self.lock_on_connect:
@@ -181,7 +200,9 @@ class IOSXR:
 
     def close(self):
         """
-        Closes the connection to the IOS-XR device.
+        Close the connection to the IOS-XR device.
+
+        Clean up after you are done and explicitly close the router connection.
         """
         if self.lock_on_connect or self.locked:
             self.unlock()
@@ -189,25 +210,31 @@ class IOSXR:
 
     def lock(self):
         """
-        Locks the IOS-XR device config.
+        Lock the IOS-XR device config.
+
+        Use if Locking/Unlocking is not performaed automatically by lock=False
         """
         if not self.locked:
             rpc_command = '<Lock/>'
-            response = __execute_rpc__(self.device, rpc_command, self.timeout)
+            __execute_rpc__(self.device, rpc_command, self.timeout)
             self.locked = True
 
     def unlock(self):
         """
-        Unlocks the IOS-XR device config.
+        Unlock the IOS-XR device config.
+
+        Use if Locking/Unlocking is not performaed automatically by lock=False
         """
         if self.locked:
             rpc_command = '<Unlock/>'
-            response = __execute_rpc__(self.device, rpc_command, self.timeout)
+            __execute_rpc__(self.device, rpc_command, self.timeout)
             self.locked = False
 
     def load_candidate_config(self, filename=None, config=None):
         """
-        Populates the attribute candidate_config with the desired
+        Load candidate confguration.
+
+        Populate the attribute candidate_config with the desired
         configuration and loads it into the router. You can populate it from
         a file or from a string. If you send both a filename and a string
         containing the configuration, the file takes precedence.
@@ -234,20 +261,20 @@ class IOSXR:
 
     def get_candidate_config(self, merge=False, formal=False):
         """
-        Retrieve the configuration loaded as candidate config in your configuration session
+        Retrieve the configuration loaded as candidate config in your configuration session.
 
         :param merge:  Merge candidate config with running config to return
                        the complete configuration including all changed
         :param formal: Return configuration in IOS-XR formal config format
         """
-        command="show configuration"
+        command = "show configuration"
         if merge:
-            command+=" merge"
+            command += " merge"
         if formal:
-            command+=" formal"
-        response =  __execute_config_show__(self.device, command, self.timeout)
+            command += " formal"
+        response = __execute_config_show__(self.device, command, self.timeout)
 
-        match = re.search(".*(!! IOS XR Configuration.*)$",response,re.DOTALL)
+        match = re.search(".*(!! IOS XR Configuration.*)$", response, re.DOTALL)
         if match is not None:
             response = match.group(1)
 
@@ -255,8 +282,10 @@ class IOSXR:
 
     def compare_config(self):
         """
-        Compares executed candidate config with the running config and
-        returns a diff, assuming the loaded config will be merged with the
+        Compare configuration to be merged with the one on the device.
+
+        Compare executed candidate config with the running config and
+        return a diff, assuming the loaded config will be merged with the
         existing one.
 
         :return:  Config diff.
@@ -264,14 +293,16 @@ class IOSXR:
         show_merge = __execute_config_show__(self.device, 'show configuration merge', self.timeout)
         show_run = __execute_config_show__(self.device, 'show running-config', self.timeout)
 
-        diff = difflib.unified_diff(show_run.splitlines(1)[2:-2],show_merge.splitlines(1)[2:-2],n=0)
+        diff = difflib.unified_diff(show_run.splitlines(1)[2:-2], show_merge.splitlines(1)[2:-2], n=0)
         diff = ''.join([x.replace('\r', '') for x in diff])
         return diff
 
     def compare_replace_config(self):
         """
-        Compares executed candidate config with the running config and
-        returns a diff, assuming the entire config will be replaced.
+        Compare configuration to be replaced with the one on the device.
+
+        Compare executed candidate config with the running config and
+        return a diff, assuming the entire config will be replaced.
 
         :return:  Config diff.
         """
@@ -281,8 +312,7 @@ class IOSXR:
 
     def commit_config(self, label=None, comment=None, confirmed=None):
         """
-        Commits the candidate config to the device, by merging it with the
-        existing one.
+        Commit the candidate config to the device, by merging it with the existing one.
 
         :param label:     Commit comment, displayed in the commit entry on the device.
         :param comment:   Commit label, displayed instead of the commit ID on the device.
@@ -296,15 +326,15 @@ class IOSXR:
         if confirmed:
             if 30 <= int(confirmed) <= 300:
                 rpc_command += ' Confirmed="%d"' % int(confirmed)
-            else: raise InvalidInputError('confirmed needs to be between 30 and 300')
+            else:
+                raise InvalidInputError('confirmed needs to be between 30 and 300')
         rpc_command += '/>'
 
-        response = __execute_rpc__(self.device, rpc_command, self.timeout)
+        __execute_rpc__(self.device, rpc_command, self.timeout)
 
     def commit_replace_config(self, label=None, comment=None, confirmed=None):
         """
-        Commits the candidate config to the device, by replacing the existing
-        one.
+        Commit the candidate config to the device, by replacing the existing one.
 
         :param comment:   User comment saved on this commit on the device
         :param label:     User label saved on this commit on the device
@@ -318,21 +348,26 @@ class IOSXR:
         if confirmed:
             if 30 <= int(confirmed) <= 300:
                 rpc_command += ' Confirmed="%d"' % int(confirmed)
-            else: raise InvalidInputError('confirmed needs to be between 30 and 300')
+            else:
+                raise InvalidInputError('confirmed needs to be between 30 and 300')
         rpc_command += '/>'
-        response = __execute_rpc__(self.device, rpc_command, self.timeout)
+        __execute_rpc__(self.device, rpc_command, self.timeout)
 
     def discard_config(self):
         """
-        Clears uncommited changes in the current session.
+        Clear uncommited changes in the current session.
+
+        Clear previously loaded configuration on the device without committing it.
         """
         rpc_command = '<Clear/>'
-        response = __execute_rpc__(self.device, rpc_command, self.timeout)
+        __execute_rpc__(self.device, rpc_command, self.timeout)
 
     def rollback(self):
         """
+        Rollback the last committed configuration.
+
         Used after a commit, the configuration will be reverted to the
         previous committed state.
         """
         rpc_command = '<Unlock/><Rollback><Previous>1</Previous></Rollback><Lock/>'
-        response = __execute_rpc__(self.device, rpc_command, self.timeout)
+        __execute_rpc__(self.device, rpc_command, self.timeout)
