@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/fooelisa/pyiosxr.svg?branch=master)](https://travis-ci.org/fooelisa/pyiosxr)
 [![Coverage Status](https://coveralls.io/repos/github/fooelisa/pyiosxr/badge.svg?branch=master)](https://coveralls.io/github/fooelisa/pyiosxr?branch=master)
 
+
 pyIOSXR
 =====
 
@@ -15,9 +16,13 @@ Install
 =======
 
 To install, execute:
-
 ```
 pip install pyIOSXR
+```
+
+To upgrade, execute:
+```
+pip install --upgrade pyIOSXR
 ```
 
 Documentation
@@ -182,9 +187,11 @@ eAPI for EOS.
 Also, many thanks go out to Brady Walsh, without whom staying sane while 
 digging through Cisco docs and XML would have been impossible.
 
+
 License
 ======
 
-Copyright 2015-2016 Netflix, Inc.
+Copyright 2015 Netflix, Inc.
+Copyright 2016 BigWave IT
 
 Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
