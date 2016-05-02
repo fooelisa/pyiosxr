@@ -1,4 +1,9 @@
+#!/usr/bin/env python
+# coding=utf-8
+"""Exceptions for pyiosxr, a module to interact with Cisco devices running IOS-XR."""
+
 # Copyright 2015 Netflix. All rights reserved.
+# Copyright 2016 BigWaveIT. All rights reserved.
 #
 # The contents of this file are licensed under the Apache License, Version 2.0
 # (the "License"); you may not use this file except in compliance with the
@@ -12,20 +17,38 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+
 class UnknownError(Exception):
+    """UnknownError Exception."""
+
     pass
+
 
 class InvalidInputError(Exception):
+    """InvalidInputError Exception."""
+
     pass
+
 
 class XMLCLIError(Exception):
+    """XMLCLIError Exception."""
+
     pass
+
 
 class TimeoutError(Exception):
+    """TimeoutError Exception."""
+
     pass
+
 
 class EOFError(Exception):
+    """EOFError Exception."""
+
     pass
 
+
 class IteratorIDError(Exception):
-	pass
+    """IteratorIDError Exception."""
+
+    pass

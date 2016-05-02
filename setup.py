@@ -1,4 +1,9 @@
+#!/usr/bin/env python
+# coding=utf-8
+"""A module to interact with Cisco devices running IOS-XR."""
+
 # Copyright 2015 Netflix. All rights reserved.
+# Copyright 2016 BigWaveIT. All rights reserved.
 #
 # The contents of this file are licensed under the Apache License, Version 2.0
 # (the "License"); you may not use this file except in compliance with the
@@ -32,11 +37,11 @@ setup(
     packages=find_packages(),
     install_requires=reqs,
     include_package_data=True,
-    description = 'Python API to interact with network devices running IOS-XR',
-    author = 'Elisa Jasinska',
-    author_email = 'elisa@bigwaveit.org',
-    url = 'https://github.com/fooelisa/pyiosxr/', # use the URL to the github repo
-    download_url = 'https://github.com/fooelisa/pyiosxr/tarball/%s' % version,
-    keywords = ['IOS-XR', 'IOSXR', 'Cisco', 'networking'],
-    classifiers = [],
+    description='Python API to interact with network devices running IOS-XR',
+    author='Elisa Jasinska',
+    author_email='elisa@bigwaveit.org',
+    url='https://github.com/fooelisa/pyiosxr/',
+    download_url='https://github.com/fooelisa/pyiosxr/tarball/%s' % version,
+    keywords=['IOS-XR', 'IOSXR', 'Cisco', 'networking'],
+    classifiers=[],
 )

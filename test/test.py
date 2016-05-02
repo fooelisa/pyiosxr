@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# coding=utf-8
+"""Unit tests for pyiosxr, a module to interact with Cisco devices running IOS-XR."""
 
 import sys
 import mock
