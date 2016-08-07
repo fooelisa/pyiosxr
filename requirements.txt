@@ -1,1 +1,1 @@
-pexpect
+netmiko >= 0.5.2

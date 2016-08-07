@@ -17,83 +17,46 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+# stdlib
 import re
-import difflib
-import pexpect
-from exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError, IteratorIDError
+import time
 
-import xml.etree.ElementTree as ET
+# third party lib
+from lxml import etree as ET
+from netmiko import ConnectHandler
+from netmiko.ssh_exception import NetMikoTimeoutException
+
+# local modules
+from exceptions import LockError
+from exceptions import UnlockError
+from exceptions import XMLCLIError
+from exceptions import ConnectError
+from exceptions import TimeoutError
+from exceptions import IteratorIDError
+from exceptions import InvalidInputError
+from exceptions import CompareConfigError
 
 
-# Build and execute xml requests.
+# ~~~ all three functions below should be deprecated and completely removed in the next releases ~~~
+####################################################################################################
+# anyway they are supposed to be private module functions
+
+
 def __execute_rpc__(device, rpc_command, timeout):
-    rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">' \
-                  + rpc_command + '</Request>'
-    try:
-        device.sendline(rpc_command)
-        index = device.expect_exact(["</Response>", "ERROR: 0xa240fe00"], timeout=timeout)
-        if index == 1:
-            raise XMLCLIError('The XML document is not well-formed')
-    except pexpect.TIMEOUT:
-        raise TimeoutError("pexpect timeout error")
-    except pexpect.EOF:
-        raise EOFError("pexpect EOF error")
-
-    # remove leading XML-agent prompt
-    response_assembled = device.before+device.match
-    response = re.sub('^[^<]*', '', response_assembled)
-
-    root = ET.fromstring(response)
-    if 'IteratorID' in root.attrib:
-        raise IteratorIDError("Non supported IteratorID in Response object. \
-Turn iteration off on your XML agent by configuring 'xml agent [tty | ssl] iteration off'. \
-For more information refer to \
-http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/iosxr_r4-1/xml/programming/guide/xl41apidoc.pdf, \
-7-99.Turn iteration off on your XML agent.")
-
-    childs = [x.tag for x in list(root)]
-
-    result_summary = root.find('ResultSummary')
-
-    if result_summary is not None and int(result_summary.get('ErrorCount', 0)) > 0:
-
-        if 'CLI' in childs:
-            error_msg = root.find('CLI').get('ErrorMsg') or ''
-        elif 'Commit' in childs:
-            error_msg = root.find('Commit').get('ErrorMsg') or ''
-        else:
-            error_msg = root.get('ErrorMsg') or ''
-
-        error_msg += '\nOriginal call was: %s' % rpc_command
-        raise XMLCLIError(error_msg)
-
-    if 'CLI' in childs:
-        cli_childs = [x.tag for x in list(root.find('CLI'))]
-        if 'Configuration' in cli_childs:
-            output = root.find('CLI').find('Configuration').text
-            if output is None:
-                output = ''
-            elif 'Invalid input detected' in output:
-                raise InvalidInputError('Invalid input entered:\n%s' % output)
-
-    return root
+    return self.device._execute_rpc(rpc_command)
 
 
-# Ecexute show commands not in config context.
 def __execute_show__(device, show_command, timeout):
-    rpc_command = '<CLI><Exec>'+show_command+'</Exec></CLI>'
-    response = __execute_rpc__(device, rpc_command, timeout)
-    return response.find('CLI').find('Exec').text.lstrip()
+    return self.device._execute_show(show_command)
 
 
-# Ecexute show commands not in config context.
 def __execute_config_show__(device, show_command, timeout):
-    rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
-    response = __execute_rpc__(device, rpc_command, timeout)
-    return response.find('CLI').find('Configuration').text.lstrip()
+    return self.device._execute_config_show(show_command)
+####################################################################################################
 
 
-class IOSXR:
+class IOSXR(object):
+
     """A class to interact with Cisco devices running IOS-XR."""
 
     def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None, lock=True):
@@ -117,6 +80,7 @@ class IOSXR:
         self.logfile = logfile
         self.lock_on_connect = lock
         self.locked = False
+        self._cli_prompt = None
 
     def __getattr__(self, item):
         """
@@ -142,9 +106,9 @@ class IOSXR:
                 cmd += " %s" % arg
 
             if kwargs.get("config"):
-                response = __execute_config_show__(self.device, cmd, self.timeout)
+                response = self._execute_config_show(cmd)
             else:
-                response = __execute_show__(self.device, cmd, self.timeout)
+                response = self._execute_show(cmd)
 
             match = re.search(".*(!! IOS XR Configuration.*)</Exec>", response, re.DOTALL)
 
@@ -164,39 +128,173 @@ class IOSXR:
         :param rpc_command: (str) rpc command such as:
                                   <Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>
         """
-        result = __execute_rpc__(self.device, rpc_command, self.timeout)
+        result = self._execute_rpc(rpc_command)
         return ET.tostring(result)
 
     def open(self):
         """
         Open a connection to an IOS-XR device.
 
-        Connects to the device using SSH (pexpect) and drops into XML mode.
+        Connects to the device using SSH and drops into XML mode.
         """
-        device = pexpect.spawn('ssh -o ConnectTimeout={} -p {} {}@{}'.format(self.timeout, self.port, self.username,
-                               self.hostname), logfile=self.logfile)
+
         try:
-            index = device.expect(['\(yes\/no\)\?', 'password:', '#', pexpect.EOF], timeout=self.timeout)
-            if index == 0:
-                device.sendline('yes')
-                index = device.expect(['\(yes\/no\)\?', 'password:', '#', pexpect.EOF], timeout=self.timeout)
-            if index == 1:
-                device.sendline(self.password)
-            elif index == 3:
-                pass
-            if index != 2:
-                device.expect('#', timeout=self.timeout)
-            device.sendline('xml')
-            index = device.expect(['XML>', 'ERROR: 0x24319600'], timeout=self.timeout)
-            if index == 1:
-                raise XMLCLIError('XML TTY agent has not been started. Please configure \'xml agent tty\'.')
-        except pexpect.TIMEOUT:
-            raise TimeoutError("pexpect timeout error")
-        except pexpect.EOF:
-            raise EOFError("pexpect EOF error")
-        self.device = device
+            self.device = ConnectHandler(device_type='cisco_xr',
+                                         ip=self.hostname,
+                                         port=self.port,
+                                         username=self.username,
+                                         password=self.password)
+            self.device.timeout = self.timeout
+        except NetMikoTimeoutException as t_err:
+            raise ConnectError(t_err.message)
+        except NetMikoAuthenticationException as au_err:
+            raise ConnectError(au_err.message)
+
+        try:
+            self._send_command('\n')
+        except XMLCLIError as x_err:
+            self._cli_prompt = x_err.message
+
+        self._enter_xml_mode()
+
+    def _enter_xml_mode(self):
+
+        try:
+            out = self._send_command('xml')  # enter in XML mode
+        except XMLCLIError as xml_err:
+            xml_err_msg = xml_err.message
+            if isinstance(self._cli_prompt, basestring):
+                xml_err_msg = xml_err_msg.replace(self._cli_prompt, '').strip()
+                xml_err_msg_lines = xml_err_msg.splitlines(1)
+                if len(xml_err_msg_lines) >= 4:
+                    # normally should be the xml command, followed by: empty line, timestamp, and error message
+                    xml_err_msg = ''.join(xml_err_msg_lines[3:])
+            raise ConnectError('Cannot connect to the XML agent. Enabled? See: {err}'.format(err=xml_err_msg))
+
         if self.lock_on_connect:
             self.lock()
+
+    def _send_command(self, command, delay_factor=.1, receive=False, start=None):
+
+        if not receive:
+            start=time.time()
+            output = self.device.send_command(command,
+                                              strip_prompt=False,
+                                              strip_command=False,
+                                              delay_factor=delay_factor)
+        else:
+            output = self._netmiko_recv()
+
+        if not output.strip().endswith('XML>'):
+            if '0x44318c06' in output or (self._cli_prompt and (output.startswith(self._cli_prompt) or \
+                    output.endswith(self._cli_prompt))):
+                # sometimes the device throws a stupid error like:
+                # ERROR: 0x44318c06 'XML-TTY' detected the 'warning' condition
+                # 'A Light Weight Messaging library communication function returned an error': No such device or address
+                # and the XML agent connection is closed, but the SSH connection is fortunately maintained
+                # OR sometimes, the device simply exits from the XML mode without any clue
+                # In both cases, we need to re-enter in XML mode...
+                self._enter_xml_mode()
+                # however, the command could not be executed properly, so we need to raise the XMLCLIError exception
+                raise XMLCLIError('Could not properly execute the command. Re-entering XML mode...')
+            elif not output.strip():  # empty output, means that the device did not start delivering the output
+                if time.time() - start < self.timeout:
+                    time.sleep(delay_factor)  # go sleep a bit
+                    return self._send_command(command, receive=True, start=start)  # let's try receiving more
+                else:
+                    raise TimeoutError('Timeout exceeded!')
+            raise XMLCLIError(output.strip())
+
+        return str(output.replace('XML>', '').strip())
+
+    def _netmiko_recv(self):
+
+        output = ''
+
+        for tmp_output in self.device.receive_data_generator():
+            output += tmp_output
+
+        return output
+
+    def _execute_rpc(self, command_xml, delay_factor=.1):
+
+        xml_rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">' \
+              + command_xml + '</Request>'
+
+        response = self._send_command(xml_rpc_command, delay_factor=delay_factor)
+
+        root = ET.fromstring(response)
+        if 'IteratorID' in root.attrib:
+            raise IteratorIDError("Non supported IteratorID in Response object. \
+    Turn iteration off on your XML agent by configuring 'xml agent [tty | ssl] iteration off'. \
+    For more information refer to \
+    http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/iosxr_r4-1/xml/programming/guide/xl41apidoc.pdf, \
+    7-99.Turn iteration off on your XML agent.")
+
+        childs = [x.tag for x in list(root)]
+
+        result_summary = root.find('ResultSummary')
+
+        if result_summary is not None and int(result_summary.get('ErrorCount', 0)) > 0:
+
+            if 'CLI' in childs:
+                error_msg = root.find('CLI').get('ErrorMsg') or ''
+            elif 'Commit' in childs:
+                error_msg = root.find('Commit').get('ErrorMsg') or ''
+                error_code = root.find('Commit').get('ErrorCode') or ''
+                if error_code == '0x41866c00':
+                    # yet another pointless IOS-XR error:
+                    # if the config DB was changed by another process,
+                    # while the current SSH connection is established and alive,
+                    # we won't be able to commit and the device will throw the following error:
+                    # 'CfgMgr' detected the 'warning' condition
+                    # 'One or more commits have occurred from other configuration sessions since this session started
+                    # or since the last commit was made from this session.'
+                    # dumb.
+                    # in this case we need to re-open the connection with the XML agent
+                    self.discard_config()  # discard candidate config
+                    try:
+                        # exiting from the XML mode
+                        self._send_command('exit')
+                    except XMLCLIError:
+                        pass  # does not terminates with `XML>`, that's fine
+                    # no need to call self._enter_xml_mode()
+                    # by default, when executing `exit`, will try to re-enter in XML mode
+                    # when the CLI prompt is detected
+                    error_msg = '0x41866c00: Config DB conflict! Please reload changes and try committing again!'
+            else:
+                error_msg = root.get('ErrorMsg') or ''
+
+            error_msg += '\nOriginal call was: %s' % xml_rpc_command
+            raise XMLCLIError(error_msg)
+
+        if 'CLI' in childs:
+            cli_childs = [x.tag for x in list(root.find('CLI'))]
+            if 'Configuration' in cli_childs:
+                output = root.find('CLI').find('Configuration').text
+                if output is None:
+                    output = ''
+                elif 'Invalid input detected' in output:
+                    raise InvalidInputError('Invalid input entered:\n%s' % output)
+
+        return root
+
+    def _execute_show(self, show_command):
+        """
+        Executes an operational show-type command.
+        """
+        # previous module function __execute_show__
+        rpc_command = '<CLI><Exec>'+show_command+'</Exec></CLI>'
+        response = self._execute_rpc(rpc_command)
+        return response.xpath('.//CLI/Exec')[0].text.strip()
+
+    def _execute_config_show(self, show_command, delay_factor=.1):
+        """
+        Executes a configuration show-type command.
+        """
+        rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
+        response = self._execute_rpc(rpc_command, delay_factor=delay_factor)
+        return response.xpath('.//CLI/Configuration')[0].text.strip()
 
     def close(self):
         """
@@ -206,7 +304,7 @@ class IOSXR:
         """
         if self.lock_on_connect or self.locked:
             self.unlock()
-        self.device.close()
+        self.device.remote_conn.close()
 
     def lock(self):
         """
@@ -216,7 +314,10 @@ class IOSXR:
         """
         if not self.locked:
             rpc_command = '<Lock/>'
-            __execute_rpc__(self.device, rpc_command, self.timeout)
+            try:
+                self._execute_rpc(rpc_command)
+            except XMLCLIError:
+                raise LockError('Unable to enter in configure exclusive mode!')
             self.locked = True
 
     def unlock(self):
@@ -227,7 +328,10 @@ class IOSXR:
         """
         if self.locked:
             rpc_command = '<Unlock/>'
-            __execute_rpc__(self.device, rpc_command, self.timeout)
+            try:
+                self._execute_rpc(rpc_command)
+            except XMLCLIError:
+                raise UnlockError('Unable to unlock the config!')
             self.locked = False
 
     def load_candidate_config(self, filename=None, config=None):
@@ -254,7 +358,7 @@ class IOSXR:
         rpc_command = '<CLI><Configuration>'+configuration+'</Configuration></CLI>'
 
         try:
-            __execute_rpc__(self.device, rpc_command, self.timeout)
+            self._execute_rpc(rpc_command)
         except InvalidInputError as e:
             self.discard_config()
             raise InvalidInputError(e.message)
@@ -272,7 +376,7 @@ class IOSXR:
             command += " merge"
         if formal:
             command += " formal"
-        response = __execute_config_show__(self.device, command, self.timeout)
+        response = self._execute_config_show(command)
 
         match = re.search(".*(!! IOS XR Configuration.*)$", response, re.DOTALL)
         if match is not None:
@@ -290,12 +394,15 @@ class IOSXR:
 
         :return:  Config diff.
         """
-        show_merge = __execute_config_show__(self.device, 'show configuration merge', self.timeout)
-        show_run = __execute_config_show__(self.device, 'show running-config', self.timeout)
 
-        diff = difflib.unified_diff(show_run.splitlines(1)[2:-2], show_merge.splitlines(1)[2:-2], n=0)
-        diff = ''.join([x.replace('\r', '') for x in diff])
-        return diff
+        try:
+            diff = self._execute_config_show('show commit changes diff', delay_factor=.1)
+            # higher delay factor given that the device needs more time to compute this output
+            # one second should be enough though
+        except XMLCLIError:
+            raise CompareConfigError('IOS-XR bug: please reload the config and try comparing again!')
+
+        return ''.join(diff.splitlines(1)[2:-2])
 
     def compare_replace_config(self):
         """
@@ -306,9 +413,7 @@ class IOSXR:
 
         :return:  Config diff.
         """
-        diff = __execute_config_show__(self.device, 'show configuration changes diff', self.timeout)
-
-        return ''.join(diff.splitlines(1)[2:-2])
+        return self.compare_config()
 
     def commit_config(self, label=None, comment=None, confirmed=None):
         """
@@ -327,10 +432,10 @@ class IOSXR:
             if 30 <= int(confirmed) <= 300:
                 rpc_command += ' Confirmed="%d"' % int(confirmed)
             else:
-                raise InvalidInputError('confirmed needs to be between 30 and 300')
+                raise InvalidInputError('confirmed needs to be between 30 and 300 seconds')
         rpc_command += '/>'
 
-        __execute_rpc__(self.device, rpc_command, self.timeout)
+        self._execute_rpc(rpc_command)
 
     def commit_replace_config(self, label=None, comment=None, confirmed=None):
         """
@@ -349,9 +454,9 @@ class IOSXR:
             if 30 <= int(confirmed) <= 300:
                 rpc_command += ' Confirmed="%d"' % int(confirmed)
             else:
-                raise InvalidInputError('confirmed needs to be between 30 and 300')
+                raise InvalidInputError('confirmed needs to be between 30 and 300 seconds')
         rpc_command += '/>'
-        __execute_rpc__(self.device, rpc_command, self.timeout)
+        self._execute_rpc(rpc_command)
 
     def discard_config(self):
         """
@@ -360,14 +465,13 @@ class IOSXR:
         Clear previously loaded configuration on the device without committing it.
         """
         rpc_command = '<Clear/>'
-        __execute_rpc__(self.device, rpc_command, self.timeout)
+        self._execute_rpc(rpc_command)
 
-    def rollback(self):
+    def rollback(self, rb_id=1):
         """
         Rollback the last committed configuration.
 
-        Used after a commit, the configuration will be reverted to the
-        previous committed state.
+        :param rb_id: Rollback a specific number of steps. Default: 1
         """
-        rpc_command = '<Unlock/><Rollback><Previous>1</Previous></Rollback><Lock/>'
-        __execute_rpc__(self.device, rpc_command, self.timeout)
+        rpc_command = '<Unlock/><Rollback><Previous>{rb_id}</Previous></Rollback><Lock/>'.format(rb_id=rb_id)
+        self._execute_rpc(rpc_command)

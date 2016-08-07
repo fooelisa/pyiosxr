@@ -18,6 +18,26 @@
 # the License.
 
 
+class ConnectError(Exception):
+    """Exception while openning the connection."""
+    pass
+
+
+class LockError(Exception):
+    """Throw this exception when unable to lock the config DB."""
+    pass
+
+
+class UnlockError(Exception):
+    """Throw this exception when unable to unlock the config DB."""
+    pass
+
+
+class CompareConfigError(Exception):
+    """Throw this exception when unable to compare config."""
+    pass
+
+
 class UnknownError(Exception):
     """UnknownError Exception."""
 
