@@ -35,6 +35,7 @@ from exceptions import TimeoutError
 from exceptions import IteratorIDError
 from exceptions import InvalidInputError
 from exceptions import CompareConfigError
+from exceptions import InvalidXMLResponse
 
 
 # ~~~ all three functions below should be deprecated and completely removed in the next releases ~~~
@@ -81,6 +82,7 @@ class IOSXR(object):
         self.lock_on_connect = lock
         self.locked = False
         self._cli_prompt = None
+        self._xml_agent_acquired = False
 
     def __getattr__(self, item):
         """
@@ -153,6 +155,7 @@ class IOSXR(object):
         try:
             self._send_command('\n')
         except XMLCLIError as x_err:
+            self._xml_agent_acquired = False  # release the XML agent
             self._cli_prompt = x_err.message
 
         self._enter_xml_mode()
@@ -174,16 +177,42 @@ class IOSXR(object):
         if self.lock_on_connect:
             self.lock()
 
+    def _timeout_exceeded(self, start, msg='Timeout exceeded!'):
+
+        if time.time() - start > self.timeout:
+            # it timeout exceeded, throw TimeoutError
+            raise TimeoutError(msg)
+
+        return False
+
     def _send_command(self, command, delay_factor=.1, receive=False, start=None):
 
         if not receive:
-            start=time.time()
+            start = time.time()
+            # because the XML agent is able to process only one single request over the same SSH session at a time
+            # first come first served
+            while self._xml_agent_acquired and not self._timeout_exceeded(start, 'Waiting to acquire the XML agent!'):
+                # will wait here till the XML agent is ready to receive new requests
+                # if stays too much, _timeout_exceeded will raise TimeoutError
+                time.sleep(delay_factor)  # rest a bit
+            self._xml_agent_acquired = True
             output = self.device.send_command(command,
+                                              # expect_string='XML>',
                                               strip_prompt=False,
                                               strip_command=False,
                                               delay_factor=delay_factor)
         else:
             output = self._netmiko_recv()
+
+        if '0xa3679e00' in output:
+                # when multiple parallel request are made, the device throws the error:
+                # ERROR: 0xa3679e00 'XML Service Library' detected the 'fatal' condition
+                # 'Multiple concurrent requests are not allowed over the same session.
+                # A request is already in progress on this session.'
+                # we could use a mechanism similar to NETCONF and push the requests in queue and serve them sequentially
+                # BUT we are not able to assign unique IDs and identify the request-reply map
+                # so will throw an error that does not help too much :(
+                raise XMLCLIError('XML agent cannot process parallel requests!')
 
         if not output.strip().endswith('XML>'):
             if '0x44318c06' in output or (self._cli_prompt and (output.startswith(self._cli_prompt) or \
@@ -197,14 +226,15 @@ class IOSXR(object):
                 self._enter_xml_mode()
                 # however, the command could not be executed properly, so we need to raise the XMLCLIError exception
                 raise XMLCLIError('Could not properly execute the command. Re-entering XML mode...')
-            elif not output.strip():  # empty output, means that the device did not start delivering the output
-                if time.time() - start < self.timeout:
-                    time.sleep(delay_factor)  # go sleep a bit
+            if not output.strip():  # empty output, means that the device did not start delivering the output
+                if not self._timeout_exceeded(start):
+                    time.sleep(delay_factor)  # go sleep a bit, you still got time
                     return self._send_command(command, receive=True, start=start)  # let's try receiving more
                 else:
                     raise TimeoutError('Timeout exceeded!')
             raise XMLCLIError(output.strip())
 
+        self._xml_agent_acquired = False  # release the XML agent
         return str(output.replace('XML>', '').strip())
 
     def _netmiko_recv(self):
@@ -223,7 +253,11 @@ class IOSXR(object):
 
         response = self._send_command(xml_rpc_command, delay_factor=delay_factor)
 
-        root = ET.fromstring(response)
+        try:
+            root = ET.fromstring(response)
+        except ET.XMLSyntaxError as xml_err:
+            raise InvalidXMLResponse('Unable to process the XML Response from the device!')
+
         if 'IteratorID' in root.attrib:
             raise IteratorIDError("Non supported IteratorID in Response object. \
     Turn iteration off on your XML agent by configuring 'xml agent [tty | ssl] iteration off'. \

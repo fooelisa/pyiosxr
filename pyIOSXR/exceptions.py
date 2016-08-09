@@ -20,21 +20,25 @@
 
 class ConnectError(Exception):
     """Exception while openning the connection."""
+
     pass
 
 
 class LockError(Exception):
     """Throw this exception when unable to lock the config DB."""
+
     pass
 
 
 class UnlockError(Exception):
     """Throw this exception when unable to unlock the config DB."""
+
     pass
 
 
 class CompareConfigError(Exception):
     """Throw this exception when unable to compare config."""
+
     pass
 
 
@@ -55,6 +59,11 @@ class XMLCLIError(Exception):
 
     pass
 
+
+class InvalidXMLResponse(Exception):
+    """Raised when unable to process properly the XML reply from the device."""
+
+    pass
 
 class TimeoutError(Exception):
     """TimeoutError Exception."""
