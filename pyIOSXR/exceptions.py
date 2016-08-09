@@ -36,6 +36,13 @@ class ConnectError(IOSXRException):
     pass
 
 
+class CommitError(IOSXRException):
+
+    """Raised when unable to commit. Mostly due to ERROR 0x41866c00"""
+
+    pass
+
+
 class LockError(IOSXRException):
     """Throw this exception when unable to lock the config DB."""
 
