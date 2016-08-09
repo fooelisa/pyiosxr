@@ -181,7 +181,7 @@ class IOSXR(object):
 
         if time.time() - start > self.timeout:
             # it timeout exceeded, throw TimeoutError
-            raise TimeoutError(msg)
+            raise TimeoutError(msg, self)
 
         return False
 
@@ -225,14 +225,14 @@ class IOSXR(object):
                 # In both cases, we need to re-enter in XML mode...
                 self._enter_xml_mode()
                 # however, the command could not be executed properly, so we need to raise the XMLCLIError exception
-                raise XMLCLIError('Could not properly execute the command. Re-entering XML mode...')
+                raise XMLCLIError('Could not properly execute the command. Re-entering XML mode...', self)
             if not output.strip():  # empty output, means that the device did not start delivering the output
                 if not self._timeout_exceeded(start):
                     time.sleep(delay_factor)  # go sleep a bit, you still got time
                     return self._send_command(command, receive=True, start=start)  # let's try receiving more
                 else:
-                    raise TimeoutError('Timeout exceeded!')
-            raise XMLCLIError(output.strip())
+                    raise TimeoutError('Timeout exceeded!', self)
+            raise XMLCLIError(output.strip(), self)
 
         self._xml_agent_acquired = False  # release the XML agent
         return str(output.replace('XML>', '').strip())
