@@ -1,2 +1,0 @@
-int GigabitEthernet0/0/0/1
-descriptionnnn testing-xml-from-this-file

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Response MajorVersion="1" MinorVersion="0"><CLI><Configuration>
+Building configuration...
+!! IOS XR Configuration 5.3.1
+!! Last configuration change at Wed Aug 10 11:03:35 2016 by netconf
+!
+service unsupported-transceiver
+hostname edge01.bjm01
+!
+lldp
+!
+end
+
+</Configuration></CLI><ResultSummary ErrorCount="0"/></Response>
+XML>
