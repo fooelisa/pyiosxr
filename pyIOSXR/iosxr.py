@@ -449,7 +449,7 @@ class IOSXR(object):
         _show_merge = self._execute_config_show('show configuration merge')
         _show_run = self._execute_config_show('show running-config')
 
-        diff = difflib.unified_diff(_show_run.splitlines(1)[2:-2], _show_merge.splitlines(1)[2:-2], n=0)
+        diff = difflib.unified_diff(_show_run.splitlines(1)[2:-2], _show_merge.splitlines(1)[2:-2])
         return ''.join([x.replace('\r', '') for x in diff])
 
     def compare_replace_config(self):
