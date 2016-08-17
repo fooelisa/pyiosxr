@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Response MajorVersion="1" MinorVersion="0"><CLI><Configuration>
+<Response MajorVersion="1" MinorVersion="0"><CLI><Exec>
 Building configuration...
 !! IOS XR Configuration version = 6.2.1.08I
-!! Last configuration change at Wed Aug 17 16:49:00 2016 by vagrant
+!! Last configuration change at Wed Aug 17 15:58:08 2016 by vagrant
 !
 telnet vrf default ipv4 server max-servers 10
 username vagrant
@@ -14,6 +14,10 @@ tpa
  address-family ipv4
   update-source MgmtEth0/RP0/CPU0/0
  !
+!
+ntp
+ server 8.8.8.8 prefer
+ peer 172.17.17.1
 !
 interface MgmtEth0/RP0/CPU0/0
  description testing parallel commits
@@ -46,5 +50,6 @@ ssh server v2
 ssh server vrf default
 end
 
-</Configuration></CLI><ResultSummary ErrorCount="0"/></Response>
+</Exec></CLI><ResultSummary ErrorCount="0"/></Response>
 XML>
+

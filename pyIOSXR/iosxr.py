@@ -59,6 +59,15 @@ def __execute_config_show__(device, show_command, timeout):
 
 
 class IOSXR(object):
+
+    _ITERATOR_ID_ERROR_MSG = (
+        'Non supported IteratorID in Response object.'
+        'Turn iteration off on your XML agent by configuring "xml agent [tty | ssl] iteration off".'
+        'For more information refer to'
+        'http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/iosxr_r4-1/xml/programming/guide/xl41apidoc.pdf, 7-99.'
+        'Please turn iteration off for the XML agent.'
+    )
+
     """
     Establishes a connection with the IOS-XR device via SSH and facilitates the communication through the XML agent.
     """
@@ -163,13 +172,6 @@ class IOSXR(object):
         try:
             out = self._send_command('xml')  # enter in XML mode
         except TimeoutError as terr:
-            # xml_err_msg = xml_err.message
-            # if isinstance(self._cli_prompt, basestring):
-            #     xml_err_msg = xml_err_msg.replace(self._cli_prompt, '').strip()
-            #     xml_err_msg_lines = xml_err_msg.splitlines(1)
-            #     if len(xml_err_msg_lines) >= 4:
-            #         # normally should be the xml command, followed by: empty line, timestamp, and error message
-            #         xml_err_msg = ''.join(xml_err_msg_lines[3:])
             raise ConnectError('Cannot connect to the XML agent. Enabled?', self)
 
         if self.lock_on_connect:
@@ -208,7 +210,7 @@ class IOSXR(object):
                     time.sleep(delay_factor)  # go sleep a bit, you still got time
                     return self._send_command(command, receive=True, start=start)  # let's try receiving more
         else:
-            output = self._netmiko_recv()
+            output = self._netmiko_recv()  # try to read some more
 
         if '0xa3679e00' in output:
                 # when multiple parallel request are made, the device throws the error:
@@ -265,12 +267,11 @@ class IOSXR(object):
             root = ET.fromstring(response)
         except ET.XMLSyntaxError as xml_err:
             if 'IteratorID="' in response:
-                raise IteratorIDError("Non supported IteratorID in Response object. \
-    Turn iteration off on your XML agent by configuring 'xml agent [tty | ssl] iteration off'. \
-    For more information refer to \
-    http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/iosxr_r4-1/xml/programming/guide/xl41apidoc.pdf, \
-    7-99.Turn iteration off on your XML agent.", self)
+                raise IteratorIDError(self._ITERATOR_ID_ERROR_MSG, self)
             raise InvalidXMLResponse('Unable to process the XML Response from the device!', self)
+
+        if 'IteratorID' in root.attrib:
+            raise IteratorIDError(self._ITERATOR_ID_ERROR_MSG, self)
 
         childs = [x.tag for x in list(root)]
 
@@ -304,7 +305,7 @@ class IOSXR(object):
                         error_msg + '\nPlease reload the changes and try committing again!',
                         self
                     )
-                elif error_code == '0x41864e00':
+                elif error_code == '0x41864e00' or error_code == '0x43682c00':
                     # raises this error when the commit buffer is empty
                     raise CommitError('The target configuration buffer is empty.')
 
@@ -334,7 +335,8 @@ class IOSXR(object):
         """
         rpc_command = '<CLI><Exec>'+show_command+'</Exec></CLI>'
         response = self._execute_rpc(rpc_command)
-        return response.xpath('.//CLI/Exec')[0].text.strip()
+        raw_response = response.xpath('.//CLI/Exec')[0].text
+        return raw_response.strip() if raw_response else ''
 
     # previous module function __execute_config_show__
     def _execute_config_show(self, show_command, delay_factor=.1):
@@ -343,7 +345,8 @@ class IOSXR(object):
         """
         rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
         response = self._execute_rpc(rpc_command, delay_factor=delay_factor)
-        return response.xpath('.//CLI/Configuration')[0].text.strip()
+        raw_response = response.xpath('.//CLI/Configuration')[0].text
+        return raw_response.strip() if raw_response else ''
 
     def close(self):
         """
