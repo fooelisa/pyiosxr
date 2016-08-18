@@ -18,37 +18,85 @@
 # the License.
 
 
-class UnknownError(Exception):
+class IOSXRException(Exception):
+
+
+    def __init__(self, msg=None, dev=None):
+
+        super(Exception, self).__init__(msg)
+        if dev:
+            self._xr = dev
+            # release the XML agent
+            self._xr._xml_agent_acquired = False
+
+
+class ConnectError(IOSXRException):
+    """Exception while openning the connection."""
+
+    pass
+
+
+class CommitError(IOSXRException):
+
+    """Raised when unable to commit. Mostly due to ERROR 0x41866c00"""
+
+    pass
+
+
+class LockError(IOSXRException):
+    """Throw this exception when unable to lock the config DB."""
+
+    pass
+
+
+class UnlockError(IOSXRException):
+    """Throw this exception when unable to unlock the config DB."""
+
+    pass
+
+
+class CompareConfigError(IOSXRException):
+    """Throw this exception when unable to compare config."""
+
+    pass
+
+
+class UnknownError(IOSXRException):
     """UnknownError Exception."""
 
     pass
 
 
-class InvalidInputError(Exception):
+class InvalidInputError(IOSXRException):
     """InvalidInputError Exception."""
 
     pass
 
 
-class XMLCLIError(Exception):
+class XMLCLIError(IOSXRException):
     """XMLCLIError Exception."""
 
     pass
 
 
-class TimeoutError(Exception):
+class InvalidXMLResponse(IOSXRException):
+    """Raised when unable to process properly the XML reply from the device."""
+
+    pass
+
+class TimeoutError(IOSXRException):
     """TimeoutError Exception."""
 
     pass
 
 
-class EOFError(Exception):
+class EOFError(IOSXRException):
     """EOFError Exception."""
 
     pass
 
 
-class IteratorIDError(Exception):
+class IteratorIDError(IOSXRException):
     """IteratorIDError Exception."""
 
     pass

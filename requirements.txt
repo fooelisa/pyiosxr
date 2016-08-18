@@ -1,1 +1,2 @@
-pexpect
+netmiko >= 0.5.2
+lxml>=3.2.4

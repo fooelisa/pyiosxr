@@ -2,770 +2,751 @@
 # coding=utf-8
 """Unit tests for pyiosxr, a module to interact with Cisco devices running IOS-XR."""
 
+import os
 import sys
-import mock
 import unittest
-from xml.etree import ElementTree
+from lxml import etree as ET
 
-import pexpect
+# ~~~ import pyIOSXR modules ~~~
 from pyIOSXR import IOSXR
-from pyIOSXR.iosxr import __execute_show__, __execute_config_show__, __execute_rpc__
-from pyIOSXR.exceptions import XMLCLIError, InvalidInputError, TimeoutError, EOFError, IteratorIDError
+# private functions
+from pyIOSXR.iosxr import __execute_rpc__
+from pyIOSXR.iosxr import __execute_show__
+from pyIOSXR.iosxr import __execute_config_show__
+# exceptions
+from pyIOSXR.exceptions import LockError
+from pyIOSXR.exceptions import UnlockError
+from pyIOSXR.exceptions import XMLCLIError
+from pyIOSXR.exceptions import CommitError
+from pyIOSXR.exceptions import ConnectError
+from pyIOSXR.exceptions import TimeoutError
+from pyIOSXR.exceptions import IteratorIDError
+from pyIOSXR.exceptions import InvalidInputError
+from pyIOSXR.exceptions import CompareConfigError
+from pyIOSXR.exceptions import InvalidXMLResponse
 
 
-# test helpers
+class _MockedNetMikoDevice(object):
 
-# def __execute_rpc__(device, rpc_command, timeout):
+    """
+    Defines the minimum attributes necessary to mock a SSH connection using netmiko.
+    """
 
-class TestExecuteRpc(unittest.TestCase):
+    def __init__(self):
 
-    def test_execute_rpc_XMLCLIError(self):
-        '''
-        Test pyiosxr helper __execute_rpc__
-        Should return XMLCLIError
-        '''
-        def sendline(foo):
+        class _MockedParamikoTransport(object):
+            def close(self):
+                pass
+        self.remote_conn = _MockedParamikoTransport()
+
+    @staticmethod
+    def get_mock_file(command, format='xml'):
+        filename = \
+            command.replace('<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">', '')\
+                   .replace('</Request>', '')\
+                   .replace('<', '')\
+                   .replace('>', '_')\
+                   .replace('/', '')\
+                   .replace('\n', '')\
+                   .replace('.', '_')\
+                   .replace(' ', '_')\
+                   .replace('"', '_')\
+                   .replace('=', '_')\
+                   .replace('$', '')\
+                   .replace('!', '')[:150]
+        curr_dir = os.path.dirname(os.path.abspath(__file__))
+        filename = '{filename}.{fmt}'.format(
+            filename=filename,
+            fmt=format
+        )
+        fullpath = os.path.join(curr_dir, 'mock', filename)
+        return open(fullpath).read()
+
+    def find_prompt(self):
+        return self.get_mock_file('\n', format='txt')
+
+    def send_command(self,
+                     command_string,
+                     delay_factor=.1,
+                     max_loops=150,
+                     strip_prompt=True,
+                     strip_command=True):
+        return self.get_mock_file(command_string)
+
+    def receive_data_generator(self):
+        return ['', '']  # to have an iteration inside private method _netmiko_recv
+
+    def send_command_expect(self,
+                            command_string,
+                            expect_string=None,
+                            delay_factor=.2,
+                            max_loops=500,
+                            auto_find_prompt=True,
+                            strip_prompt=True,
+                            strip_command=True):
+        # for the moment returns the output from send_command only
+        # this may change in time
+        return self.send_command(command_string)
+
+
+class _MockedIOSXRDevice(IOSXR):
+
+    """
+    Overrides only the very basic methods from the main device driver, that cannot be mocked.
+    """
+
+    def open(self):
+        self.device = _MockedNetMikoDevice()
+        self._cli_prompt = self.device.find_prompt()
+        self._enter_xml_mode()
+
+
+class TestIOSXRDevice(unittest.TestCase):
+
+    """
+    Tests IOS-XR basic functions.
+    """
+
+    HOSTNAME = 'localhost'
+    USERNAME = 'vagrant'
+    PASSWORD = 'vagrant'
+    PORT = 12205
+    TIMEOUT = 1  # for tests, smaller values are prefferred
+    LOCK = False
+    LOG = sys.stdout
+    MOCK = True
+
+    def __repr__(self):
+        return 'Connected as {user}@{host}:{port}, timeout is {tout}'.format(
+            user=self.USERNAME,
+            host=self.HOSTNAME,
+            port=self.PORT,
+            tout=self.TIMEOUT
+        ) if not self.MOCK else 'Simulates device behaviour using mocked data.'
+
+    __str__ = __repr__
+
+    @classmethod
+    def setUpClass(cls):
+
+        """
+        Opens the connection with the IOS-XR device.
+        """
+
+        if cls.MOCK:
+            __cls = _MockedIOSXRDevice
+        else:
+            __cls = IOSXR
+
+        cls.device = __cls(cls.HOSTNAME,
+                           cls.USERNAME,
+                           cls.PASSWORD,
+                           port=cls.PORT,
+                           lock=cls.LOCK,
+                           logfile=cls.LOG,
+                           timeout=cls.TIMEOUT)
+        cls.device.open()
+
+    @classmethod
+    def tearDownClass(cls):
+
+        """
+        Closes the connection with the device.
+        """
+
+        cls.device.close()
+
+    def test_mock_lock_connection_open(self):
+
+        if self.MOCK:
+            self.device.lock_on_connect = True
+            # because there's one single mock file
+            # and it is already used for the lock test
+            # will tesst if raises LockError on connect
+            self.assertRaises(
+                LockError,
+                self.device.lock
+            )
+            # enough to see that will try to lock during connect
+
+    def test_mock_close(self):
+
+        """Testing if unlocking when connection is closed"""
+
+        if self.MOCK:
+            self.device.locked = True
+            self.device.close()
+            self.assertFalse(self.device.locked,
+                             msg='Cannot unlock the DB.')
+
+    def test_execute_rpc_method(self):
+
+        """Testing private method _execute_rpc"""
+
+        self.assertIsInstance(
+            self.device._execute_rpc('<Get><Configuration><NTP></NTP></Configuration></Get>'),
+            ET._Element,
+            msg='Privat emethod _execute_rpc did not return a valid XML object.'
+        )
+
+    def test__getttr__show_(self):
+
+        """Testing special attribute __getattr___ against valid show command"""
+
+        self.assertIsInstance(
+            self.device.show_ntp_ass(),
+            str,
+            'Special attribute __getattr___ did not return a valid string.'
+        )
+
+    def test__getttr__show_args(self):
+
+        """Testing special attribute __getattr___ against valid show command with arguments"""
+
+        self.assertIsInstance(
+            self.device.show_ntp('ass'),
+            str
+        )
+
+    def test__getattr_show_config(self):
+
+        """Testing special attribute __getattr___ against valid show config command"""
+
+        self.assertIsInstance(
+            self.device.show_run_ntp(config=True),
+            str
+        )
+
+    def test__getattr__no_show(self):
+
+        """"Test special attribute __getattr__ agains a no-show command"""
+
+        raised = False
+
+        try:
+            self.device.configure_exclusive()
+        except AttributeError:
+            raised = True
+
+        self.assertTrue(raised)
+
+    def test__execute_rpc__(self):
+
+        """Testing private module function __execute_rpc___"""
+
+        self.assertIsInstance(
+            __execute_rpc__(self.device, '<Get><Configuration><NTP></NTP></Configuration></Get>', self.device.timeout),
+            ET._Element
+        )
+
+    def test__execute_show__(self):
+
+        """Testing private module function __execute_show__"""
+
+        self.assertIsInstance(
+            __execute_show__(self.device, 'show ntp ass', self.device.timeout),
+            str
+        )
+
+    def test__execute_config_show__(self):
+
+        """Testing private module function __execute_config_show__"""
+
+        self.assertIsInstance(
+            __execute_config_show__(self.device, 'show run ntp', self.device.timeout),
+            str
+        )
+
+    def test_make_rpc_call_returns_XML(self):
+
+        """Test if public method make_rpc_call returns str"""
+
+        self.assertIsInstance(
+            self.device.make_rpc_call('<Get><Configuration><NTP></NTP></Configuration></Get>'),
+            str
+        )
+
+    def test_acquired_xml_agent(self):
+
+        """Testing if raises TimeoutError if the XML agent is alredy acquired and released when exception thrown"""
+
+        self.device._xml_agent_acquired = True  # acquiring the XML agent
+
+        self.assertRaises(
+            TimeoutError,
+            self.device.make_rpc_call,
+            '<Get><Operational><SystemTime/><PlatformInventory/></Operational></Get>'
+        )
+
+        self.assertFalse(self.device._xml_agent_acquired)  # Exception raised => xml agent released
+
+    def test_try_to_read_till_timeout(self):
+
+        """Testing if will try to read from the device till time out"""
+
+        if self.MOCK:
+            # hard to reproduce without mock data
+            # as this event is not deterministic
+            self.assertRaises(
+                TimeoutError,
+                self.device.make_rpc_call,
+                '<This/><Does/><Not/><Exist/>'
+            )
+
+    def test_multiple_read_attempts_till_timeout(self):
+
+        """Testing if will try to read non-empty replies from the device till time out"""
+
+        if self.MOCK:
+            # hard to reproduce without mock data
+            # as this event is not deterministic
+            self.assertRaises(
+                TimeoutError,
+                self.device.make_rpc_call,
+                '<Empty/><Reply/>'
+            )
+
+    def test_iterator_id_raises_IteratorIDError(self):
+
+        """Testing if reply containing the IteratorID attribute raises IteratorIDError"""
+
+        self.device.load_candidate_config(config='xml agent tty iteration on size 1')
+        # minimum iteration size
+        self.device.commit_config(comment='pyIOSXR-test_xml-agent-iteration-on')
+        # turning on iteration
+        # and a very small value
+
+        # requesting something that we know for sure will be a big output
+        self.assertRaises(
+            IteratorIDError,
+            self.device.make_rpc_call,
+            '<Get><Operational><IPV4Network></IPV4Network></Operational></Get>'
+        )
+
+        self.device.rollback()
+        # going to prev state
+
+    def test_channel_acquired_enter_xml_mode(self):
+
+        """Test if raises ConnectError when the channel is busy with other requests"""
+
+        self.device._xml_agent_acquired = True
+
+        self.assertRaises(
+            ConnectError,
+            self.device._enter_xml_mode
+        )
+
+    def test_truncated_response_raises_InvalidXMLResponse(self):
+
+        """Testing if truncated XML reply raises InvalidXMLResponse"""
+
+        if self.MOCK:
+            # hard to reproduce without mock data
+            # as this event is not deterministic
+            self.assertRaises(
+                InvalidXMLResponse,
+                self.device._execute_rpc,
+                '<Get><Configuration><Fake/></Configuration></Get>'
+            )
+
+    def test_iosxr_bug_0x44318c06(self):
+
+        """Tests if IOS-XR bug returns error 0x44318c06 and raise XMLCLIError"""
+
+        if self.MOCK:
+            # hard to reproduce this without mock data
+            # as this event is not deterministic
+            self.assertRaises(
+                XMLCLIError,
+                self.device._execute_config_show,
+                'show commit changes diff'
+            )
+
+    def test_empty_reply_raises_TimeoutError(self):
+
+        """Testing if empty reply raises TimeoutError"""
+
+        if self.MOCK:
+            # hard to reproduce this without mock data
+            # as this event is not deterministic
+            self.assertRaises(
+                TimeoutError,
+                self.device._execute_rpc,
+                '<Empty/>'
+            )
+
+    def test_multiple_requests_raise_0xa3679e00(self):
+
+        """Testing if simultaneuous requests trigger XMLCLIError"""
+
+        if self.MOCK:
+            self.assertRaises(
+                XMLCLIError,
+                self.device._execute_rpc,
+                '<Get><Operational><ARP></ARP></Operational></Get>'
+            )
+        else:
+            # must create a multithreading and send a couple of simultaneous requests to the device
             pass
-        def expect_exact(foo, timeout):
-            return 1
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        self.assertRaises(XMLCLIError, __execute_rpc__, device=device, rpc_command='<Get></Get>', timeout=10)
-
-    def test_execute_rpc_TimeoutError(self):
-        '''
-        Test pyiosxr helper __execute_rpc__
-        Should return TimeoutError
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            raise pexpect.TIMEOUT('error')
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        self.assertRaises(TimeoutError, __execute_rpc__, device=device, rpc_command='<Get></Get>', timeout=10)
-
-    def test_execute_rpc_EOFError(self):
-        '''
-        Test pyiosxr helper __execute_rpc__
-        Should return EOFError
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            raise pexpect.EOF('error')
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        self.assertRaises(EOFError, __execute_rpc__, device=device, rpc_command='<Get></Get>', timeout=10)
-
-    def test_execute_rpc_device_close_xml(self):
-        '''
-        Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return ElementTree.Element object
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            return 0
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        setattr(device, 'match', '')
-        setattr(device, 'before', open('test/device_close.xml').read())
-        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
-
-    def test_execute_rpc_device_commit_config_xml(self):
-        '''
-        Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return ElementTree.Element object
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            return 0
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        setattr(device, 'match', '')
-        setattr(device, 'before', open('test/device_commit_config.xml').read())
-        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
-
-    def test_execute_rpc_device_compare_config_xml(self):
-        '''
-        Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return ElementTree.Element object
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            return 0
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        setattr(device, 'match', '')
-        setattr(device, 'before', open('test/device_compare_config.xml').read())
-        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
-
-    def test_execute_rpc_device_discard_config_xml(self):
-        '''
-        Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return ElementTree.Element object
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            return 0
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        setattr(device, 'match', '')
-        setattr(device, 'before', open('test/device_discard_config.xml').read())
-        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
-
-    def test_execute_rpc_device_load_candidate_config_xml(self):
-        '''
-        Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return ElementTree.Element object
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            return 0
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        setattr(device, 'match', '')
-        setattr(device, 'before', open('test/device_load_candidate_config.xml').read())
-        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
-
-    def test_execute_rpc_device_make_rpc_call_xml(self):
-        '''
-        Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return ElementTree.Element object
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            return 0
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        setattr(device, 'match', '')
-        setattr(device, 'before', open('test/device_make_rpc_call.xml').read())
-        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
-
-    def test_execute_rpc_device_open_xml(self):
-        '''
-        Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return ElementTree.Element object
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            return 0
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        setattr(device, 'match', '')
-        setattr(device, 'before', open('test/device_open.xml').read())
-        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
-
-    def test_execute_rpc_device_rollback_xml(self):
-        '''
-        Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return ElementTree.Element object
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            return 0
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        setattr(device, 'match', '')
-        setattr(device, 'before', open('test/device_rollback.xml').read())
-        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
-
-    def test_execute_rpc_device_close_xml(self):
-        '''
-        Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return ElementTree.Element object
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            return 0
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        setattr(device, 'match', '')
-        setattr(device, 'before', open('test/device_show_interfaces.xml').read())
-        self.assertIsInstance(__execute_rpc__(device=device, rpc_command='<Get></Get>', timeout=10), ElementTree.Element)
-
-    def test_execute_rpc_device_load_candidate_config_invalid_input_xml(self):
-        '''
-        Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return InvalidInputError
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            return 0
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        setattr(device, 'match', '')
-        setattr(device, 'before', open('test/device_load_candidate_config_invalid_input.xml').read())
-        self.assertRaises(InvalidInputError, __execute_rpc__, device=device, rpc_command='<Get></Get>', timeout=10)
-
-    def test_execute_rpc_device_iterator_id_error_xml(self):
-        '''
-        Test pyiosxr helper __execute_rpc__ with responses from xml files
-        Should return IteratorIDError
-        '''
-        def sendline(foo):
-            pass
-        def expect_exact(foo, timeout):
-            return 0
-        device = mock.Mock()
-        setattr(device, 'sendline', sendline)
-        setattr(device, 'expect_exact', expect_exact)
-        setattr(device, 'match', '')
-        setattr(device, 'before', open('test/device_iterator_id_error.xml').read())
-        self.assertRaises(IteratorIDError, __execute_rpc__, device=device, rpc_command='<Get></Get>', timeout=10)
-
-
-# def __execute_show__(device, show_command, timeout):
-
-class TestExecuteShow(unittest.TestCase):
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_execute_show(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr helper __execute_show__
-        Should return True
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertTrue(__execute_show__(device=device, show_command='show interfaces', timeout=10))
 
+    def test_execute_show(self):
 
-# def __execute_config_show__(device, show_command, timeout):
+        """Testing private method _execute_show"""
 
-class TestExecuteConfigShow(unittest.TestCase):
+        self.assertIsInstance(
+            self.device._execute_show('show ntp ass'),
+            str
+        )
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_execute_config_show(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr helper __execute_config_show__
-        Should return True
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertTrue(__execute_config_show__(device=device, show_command='show interfaces', timeout=10))
+    def test_execute_invalid_show_raises_InvalidInputError(self):
 
+        """Testing if invalid show command raises InvalidInputError"""
 
-# test class IOSXR
+        self.assertRaises(
+            InvalidInputError,
+            self.device._execute_show,
+            'sh fake'
+        )
 
-#     def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None, lock=True):
+    def test_execute_config_show(self):
 
-class TestInit(unittest.TestCase):
+        """Testing private method _execute_config_show"""
 
-    def test_init(self):
-        '''
-        Test pyiosxr class init
-        Should return True
-        '''
-        self.assertTrue(IOSXR(hostname='hostname', username='ejasinska', password='passwd'))
+        self.assertIsInstance(
+            self.device._execute_config_show('show run ntp'),
+            str
+        )
 
-    def test_init_no_lock(self):
-        '''
-        Test pyiosxr class init - woithout locking
-        Should return True
-        '''
-        self.assertTrue(IOSXR(hostname='hostname', username='ejasinska', password='passwd', lock=False))
+    def test_execute_invalid_config_show_raises_InvalidInputError(self):
 
-    def test_init_log_stdout(self):
-        '''
-        Test pyiosxr class init - log to stdout
-        Should return True
-        '''
-        self.assertTrue(IOSXR(hostname='hostname', username='ejasinska', password='passwd', logfile=sys.stdout))
+        """Testing if invalid config show command raises InvalidInputError"""
 
-    def test_init_log_file(self):
-        '''
-        Test pyiosxr class init - log to file
-        Should return True
-        '''
-        self.assertTrue(IOSXR(hostname='hostname', username='ejasinska', password='passwd', logfile='filehandle'))
+        self.assertRaises(
+            InvalidInputError,
+            self.device._execute_config_show,
+            'sh run fake'
+        )
+
+    def test_lock_raises_LockError(self):
+
+        """Tests if DB already locked raises LockError"""
+
+        if self.MOCK:
+            self.assertRaises(
+                LockError,
+                self.device.lock
+            )
+            self.assertFalse(self.device.locked)
+        else:
+            self.device.unlock()  # make sure the config is not locked
+            same_device = IOSXR(self.HOSTNAME,
+                            self.USERNAME,
+                            self.PASSWORD,
+                            port=self.PORT,
+                            lock=self.LOCK,
+                            logfile=self.LOG,
+                            timeout=self.TIMEOUT)
+            same_device.open()
+            same_device.lock()
+            # the other instance locks the config DB
+
+            try:
+                # trying to acquire the config DB
+                self.device.lock()
+            except LockError:
+                self.assertFalse(self.device.locked)
+            else:
+                self.assertTrue(self.device.locked)
+
+            same_device.close()
+
+    def test_unlock(self):
+
+        """Testing unlock feature"""
+
+        if self.MOCK:
+            self.device.lock = True  # make sure it is locked
+            self.device.unlock()
+            self.assertFalse(self.device.locked)
+        else:
+            # make sure this process acquires the config DB
+            self.device.lock()
+            try:
+                self.device.unlock()
+            except UnlockError:
+                # still locked
+                self.assertTrue(self.device.locked)
+            else:
+                # not locked anymore
+                self.assertFalse(self.device.locked)
+
+    def _load_dummy_config(self):
+
+        """Helper that loads some dummy data before committing."""
+
+        config = '''
+        ntp peer 172.17.17.1
+        '''
+
+        return self.device.load_candidate_config(config=config)
+
+    def test_load_invalid_config_raises_InvalidInputError(self):
 
-    def test_init_port(self):
-        '''
-        Test pyiosxr class init - pass port number
-        Should return True
-        '''
-        self.assertTrue(IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22))
+        """Testing if loading config with mistakes raises InvalidInputError"""
 
-    def test_init_timeout(self):
-        '''
-        Test pyiosxr class init - pass timeout
-        Should return True
-        '''
-        self.assertTrue(IOSXR(hostname='hostname', username='ejasinska', password='passwd', timeout=120))
+        self.assertRaises(
+            InvalidInputError,
+            self.device.load_candidate_config,
+            config='ntp beer 256.257.258.259'
+        )
+        self.device.discard_config()
 
+    def test_load_candidate_config_file(self):
 
-#     def __getattr__(self, item):
+        """Testing loading candidate config from file"""
 
-class TestGetattr(unittest.TestCase):
+        self.assertIsNone(
+            self.device.load_candidate_config(
+                filename=os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    'mock',
+                    'good.cfg'
+                )
+            )
+        )
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_show__')
-    def test_getattr_show(self, mock_show, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class getattr
-        Should return True
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        mock_show.return_value = '!! IOS XR Configuration !@#$ </Exec>'
-        self.assertTrue(device.show_interface("GigabitEthernet0/0/0/0"))
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_config_show__')
-    def test_getattr_show_config(self, mock_show, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class getattr
-        Should return True
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        mock_show.return_value = '!! IOS XR Configuration !@#$ </Exec>'
-        self.assertTrue(device.show_configuration_merge(config=True))
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    def test_getattr_AttributeError(self, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class getattr
-        Should return AttributeError
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertRaises(AttributeError, getattr, device, 'foo')
+    def test_load_invalid_candidate_config_file_raises_InvalidInputError(self):
 
+        """Testing if loading invalid config from a file raises InvalidInputError"""
 
-#     def open(self):
+        self.assertRaises(
+            InvalidInputError,
+            self.device.load_candidate_config,
+            filename=os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                'mock',
+                'bad.cfg'
+            )
+        )
 
-class TestOpen(unittest.TestCase):
+    def test_load_config(self):
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn')
-    @mock.patch('pyIOSXR.iosxr.IOSXR.lock')
-    def test_open(self, mock_lock, mock_spawn):
-        '''
-        Test pyiosxr class open
-        Should return None
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
-        self.assertIsNone(device.open())
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn')
-    def test_open_no_lock(self, mock_spawn):
-        '''
-        Test pyiosxr class open - without lock
-        Should return None
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        self.assertIsNone(device.open())
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    def test_open_ssh_key_yes(self, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class open - with ssh key warning
-        Should return Nona
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        mock_expect.return_value = 0
-        self.assertIsNone(device.open())
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    def test_open_no_passwd(self, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class open - pexpect.EOF
-        Should return Nona
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        mock_expect.return_value = 3
-        self.assertIsNone(device.open())
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    def test_open_TimeoutError(self, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class open - raising pexpect.TIMEOUT
-        Should return TimeoutError
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
-        mock_spawn.return_value = None
-        mock_expect.side_effect = pexpect.TIMEOUT('error')
-        self.assertRaises(TimeoutError, device.open)
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    def test_open_EOFError(self, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class open - raising pexpect.EOF
-        Should return EOFError
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
-        mock_spawn.return_value = None
-        mock_expect.side_effect = pexpect.EOF('error')
-        self.assertRaises(EOFError, device.open)
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    def test_open_XMLCLIError(self, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class open - error as if XML not enabled on device: ERROR: 0x24319600
-        Should return XMLCLIError
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
-        mock_spawn.return_value = None
-        # expect returns 1 to raise XMLCLIError
-        mock_expect.return_value = 1
-        self.assertRaises(XMLCLIError, device.open)
+        """Testing if able to load candidate config, then check commit diff and discard changes"""
 
+        self._load_dummy_config()
 
-#     def close(self):
+        self.assertIsInstance(
+            self.device.get_candidate_config(),
+            str,
+            msg='Unable to retrieve the candidate config'
+        )
 
-class TestClose(unittest.TestCase):
+        self.assertIsInstance(
+            self.device.get_candidate_config(merge=True),
+            str,
+            msg='Unable to retrieve merge candidate config'
+        )
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.close')
-    def test_close(self, mock_close, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class close
-        Should return None
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertIsNone(device.close())
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.close')
-    @mock.patch('pyIOSXR.iosxr.IOSXR.lock')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_close_locked(self, mock_rpc, mock_lock, mock_close, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class close with lock
-        Should return None
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertIsNone(device.close())
+        self.assertIsInstance(
+            self.device.get_candidate_config(formal=True),
+            str,
+            msg='Unable to retrieve formal candidate config'
+        )
 
+        compare_result = self.device.compare_config()
 
-#     def lock(self):
+        self.assertIsInstance(
+            compare_result,
+            str,
+            msg='Unable to compare running and candidate config'
+        )
+        # test if the result is string
 
-class TestLock(unittest.TestCase):
+        self.assertGreater(
+            len(compare_result),
+            0,
+            msg='No config changes applied.'
+        )
+        # test if len > 0
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_lock(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class lock
-        Should return None
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertIsNone(device.lock())
+        # discarding config
+        self.device.discard_config()
 
+        if not self.MOCK:
+            # will get the same mock file as above
+            self.assertEqual(
+                len(self.device.compare_config()),
+                0,
+                msg='Unable to discard changes'
+            )
 
-#     def unlock(self):
+    def test_commit_config(self):
 
-class TestUnlock(unittest.TestCase):
+        """Testing commit config"""
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.IOSXR.lock')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_unlock(self, mock_rpc, mock_lock, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class unlock
-        Should return None
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=True)
-        mock_spawn.return_value = None
-        device.open()
-        device.locked = True
-        self.assertIsNone(device.unlock())
+        self._load_dummy_config()
 
+        self.assertIsNone(self.device.commit_config())
 
-#     def discard_config(self):
+        self.device.rollback()
 
-class TestDiscardConfig(unittest.TestCase):
+    def test_commit_config_message(self):
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_discard_config(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class discard_config
-        Should return None
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertIsNone(device.discard_config())
+        """Testing commit config with comment message"""
 
+        self._load_dummy_config()
 
-#     def rollback(self):
+        self.assertIsNone(self.device.commit_config(comment="good"))
 
-class TestRollback(unittest.TestCase):
+        self.device.rollback()
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_rollback(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class rollback
-        Should return None
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertIsNone(device.rollback())
+    def test_commit_config_label(self):
 
+        """Testing commit config with label"""
 
-#     def make_rpc_call(self, rpc_command):
+        self._load_dummy_config()
 
-class TestMakeRpcCall(unittest.TestCase):
+        self.assertIsNone(self.device.commit_config(label="test"))
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_make_rpc_call(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class make_rpc_call
-        Should return True
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        mock_rpc.return_value = ElementTree.fromstring('<xml></xml>')
-        device.open()
-        self.assertTrue(device.make_rpc_call("<Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>"))
+        self.device.rollback()
 
+    def test_commit_config_confirmed(self):
 
-#     def load_candidate_config(self, filename=None, config=None):
+        """Testing commit confirmed"""
 
-class TestLoadCandidateConfig(unittest.TestCase):
+        self._load_dummy_config()
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_load_candidate_config_file(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class load_candidate_config
-        Should return None
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertIsNone(device.load_candidate_config(filename='test/config.txt'))
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_load_candidate_config(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class load_candidate_config
-        Should return None
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertIsNone(device.load_candidate_config(config='config'))
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.IOSXR.discard_config')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_load_candidate_config_InvalidInputError(self, mock_rpc, mock_discard, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class load_candidate_config
-        Should return InvalidInputError
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        mock_rpc.side_effect = InvalidInputError('error')
-        device.open()
-        self.assertRaises(InvalidInputError, device.load_candidate_config, config='config')
+        self.assertIsNone(self.device.commit_config(confirmed=60))
 
+        self.device.rollback()
 
-#     def get_candidate_config(self, merge=False, formal=False):
+    def test_commit_config_confirmed_raise_InvalidInputError(self):
 
-class TestGetCandidateConfig(unittest.TestCase):
+        """Testing if incorrect value for confirm time raises InvalidInputError"""
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_config_show__')
-    def test_get_candidate_config(self, mock_show, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class get_candidate_config
-        Should return True
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        mock_show.return_value = '!! IOS XR Configuration'
-        self.assertTrue(device.get_candidate_config(merge=True, formal=True))
+        self.assertRaises(
+            InvalidInputError,
+            self.device.commit_config,
+            confirmed=1
+        )
 
+    def test_commit_empty_buffer_raises(self):
 
-#     def compare_config(self):
+        """Testing if trying to commit empty changes raises CommitError"""
 
-class TestCompareConfig(unittest.TestCase):
+        self.assertRaises(
+            CommitError,
+            self.device.commit_config,
+            comment="empty"
+        )
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_config_show__')
-    def test_compare_config(self, mock_show, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class compare_config
-        Should return True
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        mock_show.return_value = ''
-        self.assertEqual('', device.compare_config())
-
-
-#     def compare_replace_config(self):
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_config_show__')
-    def test_compare_replace_config(self, mock_show, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class compare_replace_config
-        Should return True
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        mock_show.return_value = ''
-        self.assertEqual('', device.compare_replace_config())
+    def test_commit_after_other_session_commit(self):
 
+        """Testing if trying to commit after another process commited raises CommitError"""
 
-#     def commit_config(self, label=None, comment=None, confirmed=None):
+        if self.MOCK:
+            # mock data contains the error message we are looking for
+            self.assertRaises(
+                CommitError,
+                self.device.commit_config,
+                comment="parallel"
+            )
+        else:
+            # to test this will neet to apply changes to the same device
+            # through a different SSH session
+            same_device = IOSXR(self.HOSTNAME,
+                                self.USERNAME,
+                                self.PASSWORD,
+                                port=self.PORT,
+                                lock=self.LOCK,
+                                logfile=self.LOG,
+                                timeout=self.TIMEOUT)
+            same_device.open()
+            # loading something
+            same_device.load_candidate_config(
+                config='interface MgmtEth0/RP0/CPU0/0 description testing parallel commits'
+            )
+            # committing
+            same_device.commit_config(comment='pyIOSXR-test_parallel_commits')
 
-class TestCommitConfig(unittest.TestCase):
+            # trying to load something from the test instance
+            self.device.load_candidate_config(config='interface MgmtEth0/RP0/CPU0/0 description this wont work')
+            # and will fail because of the commit above
+            self.assertRaises(
+                CommitError,
+                self.device.commit_config,
+                comment="parallel"
+            )
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_commit_config(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class commit_config
-        Should return None
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertIsNone(device.commit_config(label='label', comment='comment', confirmed=30))
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_commit_config_InvalidInputError(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class commit_config
-        Should return InvalidInputError
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertRaises(InvalidInputError, device.commit_config, label='label', comment='comment', confirmed=900)
+            # let's rollback the committed changes
+            same_device.rollback()
+            # and close the auxiliary connection
+            same_device.close()
 
+            # because this error was raised
+            self.device.close()
+            self.device.open()
 
-#     def commit_replace_config(self, label=None, comment=None, confirmed=None):
+    def _prefetch_running_config_and_append(self):
 
-class TestCommitReplaceConfig(unittest.TestCase):
+        """Helper method to be used in the config-replace tests below"""
 
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_commit_replace_config(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class commit_replace_config
-        Should return None
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertIsNone(device.commit_replace_config(label='label', comment='comment', confirmed=30))
-
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.__init__')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.expect')
-    @mock.patch('pyIOSXR.iosxr.pexpect.spawn.sendline')
-    @mock.patch('pyIOSXR.iosxr.__execute_rpc__')
-    def test_commit_replace_config_InvalidInputError(self, mock_rpc, mock_sendline, mock_expect, mock_spawn):
-        '''
-        Test pyiosxr class commit_replace_config
-        Should return InvalidInputError
-        '''
-        device = IOSXR(hostname='hostname', username='ejasinska', password='passwd', port=22, timeout=60, logfile=None, lock=False)
-        mock_spawn.return_value = None
-        device.open()
-        self.assertRaises(InvalidInputError, device.commit_replace_config, label='label', comment='comment', confirmed=900)
+        running_config = ''.join(self.device.show_run().splitlines(1)[3:])
+        print 'loading running config again'
+        self.device.load_candidate_config(config=running_config)
+        print 'loaded'
+        self.device.load_candidate_config(config='ntp server 8.8.8.8')
+
+    def test_compare_replace_config(self):
+
+        """Testing compare replace config"""
+
+        self._prefetch_running_config_and_append()
+
+        self.assertIsInstance(self.device.compare_replace_config(), str)
+
+    def test_commit_replace_config(self):
+
+        """Testing commit replace config"""
+
+        self._prefetch_running_config_and_append()
+
+        self.assertIsNone(self.device.commit_replace_config())
+
+    def test_commit_replace_config_message(self):
+
+        """Testing commit replace config with comment message"""
+
+        self._prefetch_running_config_and_append()
+
+        self.assertIsNone(self.device.commit_replace_config(comment="good"))
+
+    def test_commit_replace_config_label(self):
+
+        """Testing commit replace config with label"""
+
+        self._prefetch_running_config_and_append()
+
+        self.assertIsNone(self.device.commit_replace_config(label="test"))
+
+    def test_commit_replace_config_confirmed(self):
+
+        """Testing commit replace confirmed"""
+
+        self._prefetch_running_config_and_append()
+
+        self.assertIsNone(self.device.commit_replace_config(confirmed=60))
+
+    def test_commit_replace_config_confirmed_raise_InvalidInputError(self):
+
+        """Testing if incorrect value for confirmed replace commit time raises InvalidInputError"""
 
+        self.assertRaises(
+            InvalidInputError,
+            self.device.commit_replace_config,
+            confirmed=500
+        )
 
 if __name__ == '__main__':
     unittest.main()
