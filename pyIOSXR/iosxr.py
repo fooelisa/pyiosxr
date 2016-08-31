@@ -356,6 +356,7 @@ class IOSXR(object):
         """
         if self.lock_on_connect or self.locked:
             self.unlock()
+        self._xml_agent_acquired = False
         self.device.remote_conn.close()
 
     def lock(self):
