@@ -462,7 +462,10 @@ class IOSXR(object):
 
         :return:  Config diff.
         """
-        return self.compare_config()
+
+        diff = self._execute_config_show('show configuration changes diff')
+
+        return ''.join(diff.splitlines(1)[2:-2])
 
     def commit_config(self, label=None, comment=None, confirmed=None):
         """

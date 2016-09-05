@@ -693,9 +693,7 @@ class TestIOSXRDevice(unittest.TestCase):
         """Helper method to be used in the config-replace tests below"""
 
         running_config = ''.join(self.device.show_run().splitlines(1)[3:])
-        print 'loading running config again'
         self.device.load_candidate_config(config=running_config)
-        print 'loaded'
         self.device.load_candidate_config(config='ntp server 8.8.8.8')
 
     def test_compare_replace_config(self):
