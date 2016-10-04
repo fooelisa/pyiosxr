@@ -20,6 +20,8 @@
 import re
 import time
 import difflib
+from threading import Lock
+from xml.sax.saxutils import escape as escape_xml
 
 # third party lib
 from lxml import etree as ET
@@ -28,37 +30,23 @@ from netmiko.ssh_exception import NetMikoTimeoutException
 from netmiko.ssh_exception import NetMikoAuthenticationException
 
 # local modules
-from exceptions import LockError
-from exceptions import UnlockError
-from exceptions import XMLCLIError
-from exceptions import CommitError
-from exceptions import ConnectError
-from exceptions import TimeoutError
-from exceptions import IteratorIDError
-from exceptions import InvalidInputError
-from exceptions import CompareConfigError
-from exceptions import InvalidXMLResponse
-
-
-# ~~~ all three functions below should be deprecated and completely removed in the next releases ~~~
-####################################################################################################
-# anyway they are supposed to be private module functions
-
-
-def __execute_rpc__(device, rpc_command, timeout):
-    return device._execute_rpc(rpc_command)
-
-
-def __execute_show__(device, show_command, timeout):
-    return device._execute_show(show_command)
-
-
-def __execute_config_show__(device, show_command, timeout):
-    return device._execute_config_show(show_command)
-####################################################################################################
+from pyIOSXR.exceptions import LockError
+from pyIOSXR.exceptions import UnlockError
+from pyIOSXR.exceptions import XMLCLIError
+from pyIOSXR.exceptions import CommitError
+from pyIOSXR.exceptions import ConnectError
+from pyIOSXR.exceptions import TimeoutError
+from pyIOSXR.exceptions import IteratorIDError
+from pyIOSXR.exceptions import InvalidInputError
+from pyIOSXR.exceptions import CompareConfigError
+from pyIOSXR.exceptions import InvalidXMLResponse
 
 
 class IOSXR(object):
+
+    """
+    Establishes a connection with the IOS-XR device via SSH and facilitates the communication through the XML agent.
+    """
 
     _ITERATOR_ID_ERROR_MSG = (
         'Non supported IteratorID in Response object.'
@@ -68,9 +56,6 @@ class IOSXR(object):
         'Please turn iteration off for the XML agent.'
     )
 
-    """
-    Establishes a connection with the IOS-XR device via SSH and facilitates the communication through the XML agent.
-    """
     def __init__(self, hostname, username, password, port=22, timeout=60, logfile=None, lock=True):
         """
         IOS-XR device constructor.
@@ -93,7 +78,7 @@ class IOSXR(object):
         self.lock_on_connect = lock
         self.locked = False
         self._cli_prompt = None
-        self._xml_agent_acquired = False
+        self._xml_agent_locker = Lock()
 
     def __getattr__(self, item):
         """
@@ -185,32 +170,60 @@ class IOSXR(object):
 
         return False
 
-    def _send_command(self, command, delay_factor=.1, receive=False, start=None, expect_string=r'XML>'):
+    def _send_command(self, command, delay_factor=.1, start=None, expect_string=r'XML>', read_output=''):
 
-        output = ''
+        output = read_output
 
-        if not receive:
+        if not delay_factor:
+            delay_factor = 0.1  # at least 0.1, corresponding to 600 max loops (60s timeout)
+
+        if not read_output:
             start = time.time()
             # because the XML agent is able to process only one single request over the same SSH session at a time
             # first come first served
-            while self._xml_agent_acquired and not self._timeout_exceeded(start, 'Waiting to acquire the XML agent!'):
+            while (not self._xml_agent_locker.acquire(False)
+            and not self._timeout_exceeded(start, 'Waiting to acquire the XML agent!')):
                 # will wait here till the XML agent is ready to receive new requests
                 # if stays too much, _timeout_exceeded will raise TimeoutError
-                time.sleep(delay_factor)  # rest a bit
-            self._xml_agent_acquired = True
+                pass  # do nothing, just wait
             try:
+                max_loops = self.timeout / delay_factor
                 output = self.device.send_command_expect(command,
                                                          expect_string=expect_string,
                                                          strip_prompt=False,
                                                          strip_command=False,
                                                          delay_factor=delay_factor,
-                                                         max_loops=1500)
+                                                         max_loops=max_loops)
             except IOError as ioe:
-                if self._timeout_exceeded(start):
-                    time.sleep(delay_factor)  # go sleep a bit, you still got time
-                    return self._send_command(command, receive=True, start=start)  # let's try receiving more
+                if command == 'xml':
+                    raise TimeoutError  # if unable to read when issuing the xml command
+                    # means that it was capable to read something, but did not match the XML> string
+                    # the XML agent seems to not be enabled, otherwise should be able to enter in XML mode
+                    # and find the prompt
+                if self._cli_prompt in output and "% Invalid input detected at '^' marker." in output:
+                    # Sometimes the XML agent simply exits and all issued commands provide the following output
+                    # (as in CLI mode)
+                    # <?
+                    #       ^
+                    # % Invalid input detected at '^' marker.
+                    # RP/0/RSP1/CPU0:edge01.dus01#<xml version="1.0" encoding="UTF-8"?
+                    #                             ^
+                    # % Invalid input detected at '^' marker.
+                    # RP/0/RSP1/CPU0:edge01.dus01#<xml version
+                    #
+                    # Which of course does not contain the XML and netmiko throws the not found error
+                    # therefore we need to re-enter in XML mode
+                    self._enter_xml_mode()
+                    # and let's issue the command again!
+                    start = None  # try from the beginning
+                    output = ''  # empty output, as the command will be executed again
+                return self._send_command(command,
+                                          start=start,
+                                          expect_string=expect_string,
+                                          delay_factor=delay_factor,
+                                          read_output=output)
         else:
-            output = self._netmiko_recv()  # try to read some more
+            output += self._netmiko_recv()  # try to read some more
 
         if '0xa3679e00' in output:
                 # when multiple parallel request are made, the device throws the error:
@@ -233,7 +246,8 @@ class IOSXR(object):
                 # In both cases, we need to re-enter in XML mode...
                 # so, whenever the CLI promt is detected, will re-enter in XML mode
                 # unless the expected string is the prompt
-                self._xml_agent_acquired = False  # release the channel
+                if self._xml_agent_locker.locked():
+                    self._xml_agent_locker.release()  # release the channel
                 self._enter_xml_mode()
                 # however, the command could not be executed properly, so we need to raise the XMLCLIError exception
                 raise XMLCLIError('Could not properly execute the command. Re-entering XML mode...', self)
@@ -243,10 +257,12 @@ class IOSXR(object):
                     return self._send_command(command, receive=True, start=start)  # let's try receiving more
             raise XMLCLIError(output.strip(), self)
 
-        self._xml_agent_acquired = False  # release the XML agent
+        if self._xml_agent_locker.locked():
+            self._xml_agent_locker.release()  # release the XML agent
+
         return str(output.replace('XML>', '').strip())
 
-    def _netmiko_recv(self, max_loops=1500):
+    def _netmiko_recv(self):
 
         output = ''
 
@@ -294,6 +310,7 @@ class IOSXR(object):
                     # or since the last commit was made from this session.'
                     # dumb.
                     # in this case we need to re-open the connection with the XML agent
+                    _candidate_config = self.get_candidate_config(merge=True)
                     self.discard_config()  # discard candidate config
                     try:
                         # exiting from the XML mode
@@ -301,13 +318,15 @@ class IOSXR(object):
                     except XMLCLIError:
                         pass  # because does not end with `XML>`
                     self._enter_xml_mode()  # re-entering XML mode
-                    raise CommitError(
-                        error_msg + '\nPlease reload the changes and try committing again!',
-                        self
-                    )
+                    self.load_candidate_config(config=_candidate_config)
+                    return self.commit_config()
+                    # raise CommitError(
+                    #     error_msg + '\nPlease reload the changes and try committing again!',
+                    #     self
+                    # )
                 elif error_code == '0x41864e00' or error_code == '0x43682c00':
                     # raises this error when the commit buffer is empty
-                    raise CommitError('The target configuration buffer is empty.')
+                    raise CommitError('The target configuration buffer is empty.', self)
 
             else:
                 error_msg = root.get('ErrorMsg') or ''
@@ -333,7 +352,9 @@ class IOSXR(object):
         """
         Executes an operational show-type command.
         """
-        rpc_command = '<CLI><Exec>'+show_command+'</Exec></CLI>'
+        rpc_command = '<CLI><Exec>{show_command}</Exec></CLI>'.format(
+            show_command=escape_xml(show_command)
+        )
         response = self._execute_rpc(rpc_command)
         raw_response = response.xpath('.//CLI/Exec')[0].text
         return raw_response.strip() if raw_response else ''
@@ -343,7 +364,9 @@ class IOSXR(object):
         """
         Executes a configuration show-type command.
         """
-        rpc_command = '<CLI><Configuration>'+show_command+'</Configuration></CLI>'
+        rpc_command = '<CLI><Configuration>{show_command}</Configuration></CLI>'.format(
+            show_command=escape_xml(show_command)
+        )
         response = self._execute_rpc(rpc_command, delay_factor=delay_factor)
         raw_response = response.xpath('.//CLI/Configuration')[0].text
         return raw_response.strip() if raw_response else ''
@@ -356,7 +379,8 @@ class IOSXR(object):
         """
         if self.lock_on_connect or self.locked:
             self.unlock()
-        self._xml_agent_acquired = False
+        if self._xml_agent_locker.locked():
+            self._xml_agent_locker.release()
         self.device.remote_conn.close()
 
     def lock(self):
@@ -408,7 +432,9 @@ class IOSXR(object):
             with open(filename) as f:
                 configuration = f.read()
 
-        rpc_command = '<CLI><Configuration>'+configuration+'</Configuration></CLI>'
+        rpc_command = '<CLI><Configuration>{configuration}</Configuration></CLI>'.format(
+            configuration=escape_xml(configuration)  # need to escape, otherwise will try to load invalid XML
+        )
 
         try:
             self._execute_rpc(rpc_command)
