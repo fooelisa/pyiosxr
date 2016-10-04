@@ -170,14 +170,14 @@ class IOSXR(object):
 
         return False
 
-    def _send_command(self, command, delay_factor=.1, start=None, expect_string=r'XML>', read_output=''):
+    def _send_command(self, command, delay_factor=.1, start=None, expect_string=r'XML>', read_output='', receive=False):
 
         output = read_output
 
         if not delay_factor:
             delay_factor = 0.1  # at least 0.1, corresponding to 600 max loops (60s timeout)
 
-        if not read_output:
+        if not read_output and not receive:
             start = time.time()
             # because the XML agent is able to process only one single request over the same SSH session at a time
             # first come first served

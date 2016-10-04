@@ -240,7 +240,7 @@ class TestIOSXRDevice(unittest.TestCase):
 
         """Testing if raises TimeoutError if the XML agent is alredy acquired and released when exception thrown"""
 
-        self.device._xml_agent_acquired = True  # acquiring the XML agent
+        self.device._xml_agent_locker.acquire()  # acquiring the XML agent
 
         self.assertRaises(
             TimeoutError,
@@ -248,7 +248,7 @@ class TestIOSXRDevice(unittest.TestCase):
             '<Get><Operational><SystemTime/><PlatformInventory/></Operational></Get>'
         )
 
-        self.assertFalse(self.device._xml_agent_acquired)  # Exception raised => xml agent released
+        self.assertFalse(self.device._xml_agent_locker.locked())  # Exception raised => xml agent released
 
     def test_try_to_read_till_timeout(self):
 
@@ -300,7 +300,7 @@ class TestIOSXRDevice(unittest.TestCase):
 
         """Test if raises ConnectError when the channel is busy with other requests"""
 
-        self.device._xml_agent_acquired = True
+        self.device._xml_agent_locker.acquire()
 
         self.assertRaises(
             ConnectError,
@@ -613,7 +613,7 @@ class TestIOSXRDevice(unittest.TestCase):
 
     def test_commit_after_other_session_commit(self):
 
-        """Testing if trying to commit after another process commited raises CommitError"""
+        """Testing if trying to commit after another process commited does not raise CommitError"""
 
         if self.MOCK:
             # mock data contains the error message we are looking for
@@ -643,7 +643,7 @@ class TestIOSXRDevice(unittest.TestCase):
             # trying to load something from the test instance
             self.device.load_candidate_config(config='interface MgmtEth0/RP0/CPU0/0 description this wont work')
             # and will fail because of the commit above
-            self.assertRaises(
+            self.assertNotRaises(
                 CommitError,
                 self.device.commit_config,
                 comment="parallel"
