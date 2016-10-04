@@ -9,10 +9,7 @@ from lxml import etree as ET
 
 # ~~~ import pyIOSXR modules ~~~
 from pyIOSXR import IOSXR
-# private functions
-from pyIOSXR.iosxr import __execute_rpc__
-from pyIOSXR.iosxr import __execute_show__
-from pyIOSXR.iosxr import __execute_config_show__
+
 # exceptions
 from pyIOSXR.exceptions import LockError
 from pyIOSXR.exceptions import UnlockError
@@ -229,33 +226,6 @@ class TestIOSXRDevice(unittest.TestCase):
             raised = True
 
         self.assertTrue(raised)
-
-    def test__execute_rpc__(self):
-
-        """Testing private module function __execute_rpc___"""
-
-        self.assertIsInstance(
-            __execute_rpc__(self.device, '<Get><Configuration><NTP></NTP></Configuration></Get>', self.device.timeout),
-            ET._Element
-        )
-
-    def test__execute_show__(self):
-
-        """Testing private module function __execute_show__"""
-
-        self.assertIsInstance(
-            __execute_show__(self.device, 'show ntp ass', self.device.timeout),
-            str
-        )
-
-    def test__execute_config_show__(self):
-
-        """Testing private module function __execute_config_show__"""
-
-        self.assertIsInstance(
-            __execute_config_show__(self.device, 'show run ntp', self.device.timeout),
-            str
-        )
 
     def test_make_rpc_call_returns_XML(self):
 
