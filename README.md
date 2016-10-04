@@ -4,26 +4,42 @@
 [![Coverage Status](https://coveralls.io/repos/github/fooelisa/pyiosxr/badge.svg?branch=master)](https://coveralls.io/github/fooelisa/pyiosxr?branch=master)
 
 
-pyIOSXR
-=====
+pyIOSXR: Python library to manage devices running IOS-XR using the XML agent
+============================================================================
 
-In the spirit of [pyEOS](https://github.com/spotify/pyeos) for Arista EOS 
-devices and [pyEZ](https://github.com/Juniper/py-junos-eznc) for JUNOS 
-devices, pyIOSXR is a python library to help interact with Cisco devices 
-running IOS-XR.
+pyIOSXR is a Python library that facilitates communication with Cisco devices running IOS-XR through the XML agent.
+Initially was developed by Elisa Jasinska [@fooelisa](https://github.com/fooelisa) and integrated in [NAPALM](https://github.com/napalm-automation/napalm-iosxr).
+It is now maintained by Mircea Ulinic [@mirceaulinic](https://github.com/mirceaulinic)
+
+Requirements
+=============
+
+* netmiko >= 0.5.2
+* lxml >= 3.4.2
+
+* IOS-XR >= 5.1.0
+
 
 Install
 =======
 
-To install, execute:
-```
+Install via pip:
+```bash
 pip install pyIOSXR
 ```
 
-To upgrade, execute:
-```
+For upgrade:
+```bash
 pip install --upgrade pyIOSXR
 ```
+
+Usage
+======
+
+Firstly make sure that the XML agent is properly enabled on the device:
+
+    # xml agent tty iteration off
+
 
 Documentation
 =============
@@ -53,7 +69,7 @@ If we connected to the device without locking the config, we might want to lock/
 ```
 
 ### Load and Compare Config
-Load a candidate configuration from a file and show the diff that is going to 
+Load a candidate configuration from a file and show the diff that is going to
 be applied when committing the config:
 ```python
 >>> device.load_candidate_config(filename='unit/test/config.txt')
@@ -67,7 +83,7 @@ be applied when committing the config:
 ```
 
 ### Get current loaded candidate config
-Get the currently pending changes from the candidate configuration loaded by 
+Get the currently pending changes from the candidate configuration loaded by
 load_candidate_config(). candidate can be merged with the current
 running configuration by applying the "merge" keyword
 ```python
@@ -89,7 +105,7 @@ call discard_config():
 ```
 
 ### Load, Compare and Merge Config
-If you want to commit the loaded configuration and merge it with the existing 
+If you want to commit the loaded configuration and merge it with the existing
 configuration, call commit_config():
 (comment and label is optional parameters)
 ```python
@@ -136,7 +152,7 @@ to the commit:
 ```
 
 ### Running Show Commands
-Any show command can be executed in the following fashion, with the command 
+Any show command can be executed in the following fashion, with the command
 embedded into the call:
 ```python
 >>> device.show_bgp_summary()
@@ -180,11 +196,11 @@ OR
 
 Thanks
 ======
-A special thanks to David Barroso! This library is entirely based on David's
+A special thanks to David Barroso! The first versions were entirely based on David's
 [pyEOS](https://github.com/spotify/pyeos), which is a wrapper around Arista's
 eAPI for EOS.
 
-Also, many thanks go out to Brady Walsh, without whom staying sane while 
+Also, many thanks go out to Brady Walsh, without whom staying sane while
 digging through Cisco docs and XML would have been impossible.
 
 
