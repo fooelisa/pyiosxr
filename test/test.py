@@ -50,6 +50,7 @@ class _MockedNetMikoDevice(object):
                    .replace('"', '_')\
                    .replace('=', '_')\
                    .replace('$', '')\
+                   .replace(':', '')\
                    .replace('!', '')[:150]
         curr_dir = os.path.dirname(os.path.abspath(__file__))
         filename = '{filename}.{fmt}'.format(
@@ -108,7 +109,7 @@ class TestIOSXRDevice(unittest.TestCase):
     USERNAME = 'vagrant'
     PASSWORD = 'vagrant'
     PORT = 12205
-    TIMEOUT = 1  # for tests, smaller values are prefferred
+    TIMEOUT = .1  # for tests, smaller values are prefferred
     LOCK = False
     LOG = sys.stdout
     MOCK = True
@@ -615,13 +616,12 @@ class TestIOSXRDevice(unittest.TestCase):
 
         """Testing if trying to commit after another process commited does not raise CommitError"""
 
+        if self.device._xml_agent_locker.locked():
+            self.device._xml_agent_locker.release()
+
         if self.MOCK:
             # mock data contains the error message we are looking for
-            self.assertRaises(
-                CommitError,
-                self.device.commit_config,
-                comment="parallel"
-            )
+            self.assertIsNone(self.device.commit_config(comment="parallel"))
         else:
             # to test this will neet to apply changes to the same device
             # through a different SSH session
@@ -643,11 +643,7 @@ class TestIOSXRDevice(unittest.TestCase):
             # trying to load something from the test instance
             self.device.load_candidate_config(config='interface MgmtEth0/RP0/CPU0/0 description this wont work')
             # and will fail because of the commit above
-            self.assertNotRaises(
-                CommitError,
-                self.device.commit_config,
-                comment="parallel"
-            )
+            self.assertIsNone(self.device.commit_config(comment="parallel"))
 
             # let's rollback the committed changes
             same_device.rollback()
