@@ -4,6 +4,7 @@
 
 import os
 import sys
+import time
 import unittest
 from lxml import etree as ET
 
@@ -69,6 +70,9 @@ class _MockedNetMikoDevice(object):
                      max_loops=150,
                      strip_prompt=True,
                      strip_command=True):
+        return self.get_mock_file(command_string)
+
+    def send_command_timing(self, command_string, **kvargs):
         return self.get_mock_file(command_string)
 
     def receive_data_generator(self):
@@ -165,6 +169,7 @@ class TestIOSXRDevice(unittest.TestCase):
                 LockError,
                 self.device.lock
             )
+            self.device.lock_on_connect = False
             # enough to see that will try to lock during connect
 
     def test_mock_close(self):
@@ -206,6 +211,35 @@ class TestIOSXRDevice(unittest.TestCase):
             str
         )
 
+    def test_acquire_xml_agent(self):
+
+        """Testing if able to acquire the XML agent."""
+
+        self.device._lock_xml_agent(time.time())
+        self.assertTrue(self.device._xml_agent_locker.locked())
+        self.device._unlock_xml_agent()
+
+    def test_acquire_locked_agent_raises_timeout_error(self):
+        """Testing if trying to acquire the XML agent while locked raises TimeoutError."""
+        self.device._lock_xml_agent(time.time())  # acquiring
+        self.assertRaises(
+            TimeoutError,
+            self.device._lock_xml_agent,  # trying to acquire again
+            time.time()
+        )
+        self.device._unlock_xml_agent()  # releasing back
+
+    def test_release_xml_agent(self):
+        """Testing releasing of XML agent."""
+        self.device._lock_xml_agent(time.time())
+        self.assertTrue(self.device._xml_agent_locker.locked())
+        self.device._unlock_xml_agent()
+        self.assertFalse(self.device._xml_agent_locker.locked())
+
+    def test_in_cli_mode(self):
+        """Testing the private method _in_cli_mode."""
+        self.assertTrue(self.device._in_cli_mode())
+
     def test__getattr_show_config(self):
 
         """Testing special attribute __getattr___ against valid show config command"""
@@ -241,7 +275,7 @@ class TestIOSXRDevice(unittest.TestCase):
 
         """Testing if raises TimeoutError if the XML agent is alredy acquired and released when exception thrown"""
 
-        self.device._xml_agent_locker.acquire()  # acquiring the XML agent
+        self.device._lock_xml_agent(time.time())  # acquiring the XML agent
 
         self.assertRaises(
             TimeoutError,
@@ -299,14 +333,11 @@ class TestIOSXRDevice(unittest.TestCase):
 
     def test_channel_acquired_enter_xml_mode(self):
 
-        """Test if raises ConnectError when the channel is busy with other requests"""
+        """Test if not raises ConnectError when the channel is busy with other requests"""
 
-        self.device._xml_agent_locker.acquire()
+        self.device._lock_xml_agent()
 
-        self.assertRaises(
-            ConnectError,
-            self.device._enter_xml_mode
-        )
+        self.assertIsNone(self.device._enter_xml_mode())
 
     def test_truncated_response_raises_InvalidXMLResponse(self):
 
@@ -615,9 +646,6 @@ class TestIOSXRDevice(unittest.TestCase):
     def test_commit_after_other_session_commit(self):
 
         """Testing if trying to commit after another process commited does not raise CommitError"""
-
-        if self.device._xml_agent_locker.locked():
-            self.device._xml_agent_locker.release()
 
         if self.MOCK:
             # mock data contains the error message we are looking for

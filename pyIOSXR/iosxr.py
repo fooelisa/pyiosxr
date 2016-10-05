@@ -246,7 +246,7 @@ class IOSXR(object):
         if not read_output and not receive:
             # because the XML agent is able to process only one single request over the same SSH session at a time
             # first come first served
-            self._lock_xml_agent()
+            self._lock_xml_agent(start)
             try:
                 max_loops = self.timeout / delay_factor
                 last_read = self.device.send_command_expect(command,
@@ -316,7 +316,8 @@ class IOSXR(object):
                 raise XMLCLIError('Could not properly execute the command. Re-entering XML mode...', self)
             if not output.strip():  # empty output, means that the device did not start delivering the output
                 # but for sure is still in XML mode as netmiko did not throw error
-                return self._send_command(command, receive=True, start=start)  # let's try receiving more
+                if not self._timeout_exceeded(start=start):
+                    return self._send_command(command, receive=True, start=start)  # let's try receiving more
 
             raise XMLCLIError(output.strip(), self)
 
