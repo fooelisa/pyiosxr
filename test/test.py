@@ -9,10 +9,7 @@ from lxml import etree as ET
 
 # ~~~ import pyIOSXR modules ~~~
 from pyIOSXR import IOSXR
-# private functions
-from pyIOSXR.iosxr import __execute_rpc__
-from pyIOSXR.iosxr import __execute_show__
-from pyIOSXR.iosxr import __execute_config_show__
+
 # exceptions
 from pyIOSXR.exceptions import LockError
 from pyIOSXR.exceptions import UnlockError
@@ -53,6 +50,7 @@ class _MockedNetMikoDevice(object):
                    .replace('"', '_')\
                    .replace('=', '_')\
                    .replace('$', '')\
+                   .replace(':', '')\
                    .replace('!', '')[:150]
         curr_dir = os.path.dirname(os.path.abspath(__file__))
         filename = '{filename}.{fmt}'.format(
@@ -111,7 +109,7 @@ class TestIOSXRDevice(unittest.TestCase):
     USERNAME = 'vagrant'
     PASSWORD = 'vagrant'
     PORT = 12205
-    TIMEOUT = 1  # for tests, smaller values are prefferred
+    TIMEOUT = .1  # for tests, smaller values are prefferred
     LOCK = False
     LOG = sys.stdout
     MOCK = True
@@ -230,33 +228,6 @@ class TestIOSXRDevice(unittest.TestCase):
 
         self.assertTrue(raised)
 
-    def test__execute_rpc__(self):
-
-        """Testing private module function __execute_rpc___"""
-
-        self.assertIsInstance(
-            __execute_rpc__(self.device, '<Get><Configuration><NTP></NTP></Configuration></Get>', self.device.timeout),
-            ET._Element
-        )
-
-    def test__execute_show__(self):
-
-        """Testing private module function __execute_show__"""
-
-        self.assertIsInstance(
-            __execute_show__(self.device, 'show ntp ass', self.device.timeout),
-            str
-        )
-
-    def test__execute_config_show__(self):
-
-        """Testing private module function __execute_config_show__"""
-
-        self.assertIsInstance(
-            __execute_config_show__(self.device, 'show run ntp', self.device.timeout),
-            str
-        )
-
     def test_make_rpc_call_returns_XML(self):
 
         """Test if public method make_rpc_call returns str"""
@@ -270,7 +241,7 @@ class TestIOSXRDevice(unittest.TestCase):
 
         """Testing if raises TimeoutError if the XML agent is alredy acquired and released when exception thrown"""
 
-        self.device._xml_agent_acquired = True  # acquiring the XML agent
+        self.device._xml_agent_locker.acquire()  # acquiring the XML agent
 
         self.assertRaises(
             TimeoutError,
@@ -278,7 +249,7 @@ class TestIOSXRDevice(unittest.TestCase):
             '<Get><Operational><SystemTime/><PlatformInventory/></Operational></Get>'
         )
 
-        self.assertFalse(self.device._xml_agent_acquired)  # Exception raised => xml agent released
+        self.assertFalse(self.device._xml_agent_locker.locked())  # Exception raised => xml agent released
 
     def test_try_to_read_till_timeout(self):
 
@@ -330,7 +301,7 @@ class TestIOSXRDevice(unittest.TestCase):
 
         """Test if raises ConnectError when the channel is busy with other requests"""
 
-        self.device._xml_agent_acquired = True
+        self.device._xml_agent_locker.acquire()
 
         self.assertRaises(
             ConnectError,
@@ -643,15 +614,14 @@ class TestIOSXRDevice(unittest.TestCase):
 
     def test_commit_after_other_session_commit(self):
 
-        """Testing if trying to commit after another process commited raises CommitError"""
+        """Testing if trying to commit after another process commited does not raise CommitError"""
+
+        if self.device._xml_agent_locker.locked():
+            self.device._xml_agent_locker.release()
 
         if self.MOCK:
             # mock data contains the error message we are looking for
-            self.assertRaises(
-                CommitError,
-                self.device.commit_config,
-                comment="parallel"
-            )
+            self.assertIsNone(self.device.commit_config(comment="parallel"))
         else:
             # to test this will neet to apply changes to the same device
             # through a different SSH session
@@ -673,11 +643,7 @@ class TestIOSXRDevice(unittest.TestCase):
             # trying to load something from the test instance
             self.device.load_candidate_config(config='interface MgmtEth0/RP0/CPU0/0 description this wont work')
             # and will fail because of the commit above
-            self.assertRaises(
-                CommitError,
-                self.device.commit_config,
-                comment="parallel"
-            )
+            self.assertIsNone(self.device.commit_config(comment="parallel"))
 
             # let's rollback the committed changes
             same_device.rollback()

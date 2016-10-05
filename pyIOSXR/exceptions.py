@@ -27,7 +27,8 @@ class IOSXRException(Exception):
         if dev:
             self._xr = dev
             # release the XML agent
-            self._xr._xml_agent_acquired = False
+            if self._xr._xml_agent_locker.locked():
+                self._xr._xml_agent_locker.release()
 
 
 class ConnectError(IOSXRException):
