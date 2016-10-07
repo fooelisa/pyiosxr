@@ -28,7 +28,7 @@ install_reqs = parse_requirements('requirements.txt', session=uuid.uuid1())
 # e.g. ['django==1.5.1', 'mezzanine==1.4.6']
 reqs = [str(ir.req) for ir in install_reqs]
 
-version = '0.21'
+version = '0.25'
 
 setup(
     name='pyIOSXR',
@@ -38,8 +38,8 @@ setup(
     install_requires=reqs,
     include_package_data=True,
     description='Python API to interact with network devices running IOS-XR',
-    author='Elisa Jasinska',
-    author_email='elisa@bigwaveit.org',
+    author='Elisa Jasinska, Mircea Ulinic',
+    author_email='elisa@bigwaveit.org, mircea@cloudflare.com',
     url='https://github.com/fooelisa/pyiosxr/',
     download_url='https://github.com/fooelisa/pyiosxr/tarball/%s' % version,
     keywords=['IOS-XR', 'IOSXR', 'Cisco', 'networking'],
