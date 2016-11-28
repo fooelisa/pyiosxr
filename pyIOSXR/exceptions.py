@@ -23,7 +23,7 @@ class IOSXRException(Exception):
 
     def __init__(self, msg=None, dev=None):
 
-        super(Exception, self).__init__(msg)
+        super(IOSXRException, self).__init__(msg)
         if dev:
             self._xr = dev
             # release the XML agent
@@ -34,7 +34,11 @@ class IOSXRException(Exception):
 class ConnectError(IOSXRException):
     """Exception while openning the connection."""
 
-    pass
+    def __init__(self, msg=None, dev=None):
+        super(ConnectError, self).__init__(msg=msg, dev=dev)
+        if dev:
+            self._xr = dev
+            self._xr._xml_agent_alive = False
 
 
 class CommitError(IOSXRException):
