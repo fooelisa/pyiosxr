@@ -91,6 +91,7 @@ class IOSXR(object):
         self.locked = False
         self._cli_prompt = None
         self._xml_agent_locker = Lock()
+        self._xml_agent_alive = False
 
     def __getattr__(self, item):
         """
@@ -155,6 +156,7 @@ class IOSXR(object):
                                          username=self.username,
                                          password=self.password)
             self.device.timeout = self.timeout
+            self._xml_agent_alive = True  # successfully open thus alive
         except NetMikoTimeoutException as t_err:
             raise ConnectError(t_err.message)
         except NetMikoAuthenticationException as au_err:
@@ -163,6 +165,12 @@ class IOSXR(object):
         self._cli_prompt = self.device.find_prompt()  # get the prompt
 
         self._enter_xml_mode()
+
+    def is_alive(self):
+        """
+        Returns the XML agent connection state.
+        """
+        return self._xml_agent_alive
 
     def _timeout_exceeded(self, start=None, msg='Timeout exceeded!'):
         if not start:
