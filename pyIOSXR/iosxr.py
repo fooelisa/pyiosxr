@@ -297,11 +297,16 @@ class IOSXR(object):
         else:
             output += self._netmiko_recv()  # try to read some more
 
-        if '0xa3679e00' in output:
-                # when multiple parallel request are made, the device throws the error:
+        if '0xa3679e00' in output or '0xa367da00' in output:
+                # when multiple parallel request are made, the device throws one of the the errors:
+                # ---
                 # ERROR: 0xa3679e00 'XML Service Library' detected the 'fatal' condition
                 # 'Multiple concurrent requests are not allowed over the same session.
                 # A request is already in progress on this session.'
+                #
+                # ERROR: 0xa367da00 XML Service Library' detected the 'fatal' condition
+                # 'Sending multiple documents is not supported.'
+                # ---
                 # we could use a mechanism similar to NETCONF and push the requests in queue and serve them sequentially
                 # BUT we are not able to assign unique IDs and identify the request-reply map
                 # so will throw an error that does not help too much :(
