@@ -102,6 +102,9 @@ class _MockedIOSXRDevice(IOSXR):
         self._cli_prompt = self.device.find_prompt()
         self._enter_xml_mode()
 
+    def is_alive(self):
+        return True
+
 
 class TestIOSXRDevice(unittest.TestCase):
 
