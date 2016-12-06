@@ -140,6 +140,11 @@ class IOSXR(object):
         :param rpc_command: (str) rpc command such as:
                                   <Get><Operational><LLDP><NodeTable></NodeTable></LLDP></Operational></Get>
         """
+        # ~~~ hack: ~~~
+        if not self.is_alive():
+            self.close()  # force close for safety
+            self.open()  # reopen
+        # ~~~ end hack ~~~
         result = self._execute_rpc(rpc_command)
         return ET.tostring(result)
 
@@ -163,14 +168,15 @@ class IOSXR(object):
             raise ConnectError(au_err.message)
 
         self._cli_prompt = self.device.find_prompt()  # get the prompt
-
         self._enter_xml_mode()
 
     def is_alive(self):
         """
-        Returns the XML agent connection state.
+        Returns the XML agent connection state (and SSH connection state).
         """
-        return self._xml_agent_alive
+        if hasattr(self.device, 'remote_conn'):
+            return self.device.remote_conn.transport.is_active() and self._xml_agent_alive
+        return False  # remote_conn not there => connection not init => not alive
 
     def _timeout_exceeded(self, start=None, msg='Timeout exceeded!'):
         if not start:
@@ -449,9 +455,10 @@ class IOSXR(object):
         Clean up after you are done and explicitly close the router connection.
         """
         if self.lock_on_connect or self.locked:
-            self.unlock()
-        self._unlock_xml_agent()
-        self.device.remote_conn.close()
+            self.unlock()  # this refers to the config DB
+        self._unlock_xml_agent()  # this refers to the XML agent
+        if hasattr(self.device, 'remote_conn'):
+            self.device.remote_conn.close()  # close the underlying SSH session
 
     def lock(self):
         """
