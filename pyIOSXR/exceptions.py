@@ -89,10 +89,15 @@ class InvalidXMLResponse(IOSXRException):
 
     pass
 
+
 class TimeoutError(IOSXRException):
     """TimeoutError Exception."""
 
-    pass
+    def __init__(self, msg=None, dev=None):
+        super(TimeoutError, self).__init__(msg=msg, dev=dev)
+        if dev:
+            self._xr = dev
+            self._xr._xml_agent_alive = False
 
 
 class EOFError(IOSXRException):
