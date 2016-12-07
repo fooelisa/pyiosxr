@@ -361,7 +361,7 @@ class IOSXR(object):
         response = self._send_command(xml_rpc_command, delay_factor=delay_factor)
 
         try:
-            root = ET.fromstring(response)
+            root = ET.fromstring(str.encode(response))
         except ET.XMLSyntaxError as xml_err:
             if 'IteratorID="' in response:
                 raise IteratorIDError(self._ITERATOR_ID_ERROR_MSG, self)
@@ -517,7 +517,7 @@ class IOSXR(object):
             self._execute_rpc(rpc_command)
         except InvalidInputError as e:
             self.discard_config()
-            raise InvalidInputError(e.message, self)
+            raise InvalidInputError(e.args[0], self)
 
     def get_candidate_config(self, merge=False, formal=False):
         """
