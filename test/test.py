@@ -7,6 +7,7 @@ import sys
 import time
 import unittest
 from lxml import etree as ET
+from six import binary_type
 
 # ~~~ import pyIOSXR modules ~~~
 from pyIOSXR import IOSXR
@@ -59,7 +60,8 @@ class _MockedNetMikoDevice(object):
             fmt=format
         )
         fullpath = os.path.join(curr_dir, 'mock', filename)
-        return open(fullpath).read()
+        with open(fullpath) as file_data:
+            return file_data.read()
 
     def find_prompt(self):
         return self.get_mock_file('\n', format='txt')
@@ -271,7 +273,7 @@ class TestIOSXRDevice(unittest.TestCase):
 
         self.assertIsInstance(
             self.device.make_rpc_call('<Get><Configuration><NTP></NTP></Configuration></Get>'),
-            str
+            binary_type
         )
 
     def test_acquired_xml_agent(self):
