@@ -163,9 +163,9 @@ class IOSXR(object):
             self.device.timeout = self.timeout
             self._xml_agent_alive = True  # successfully open thus alive
         except NetMikoTimeoutException as t_err:
-            raise ConnectError(t_err.message)
+            raise ConnectError(t_err.args[0])
         except NetMikoAuthenticationException as au_err:
-            raise ConnectError(au_err.message)
+            raise ConnectError(au_err.args[0])
 
         self._cli_prompt = self.device.find_prompt()  # get the prompt
         self._enter_xml_mode()
