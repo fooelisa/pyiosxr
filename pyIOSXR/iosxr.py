@@ -68,7 +68,16 @@ class IOSXR(object):
                  port=22,
                  timeout=60,
                  logfile=None,
-                 lock=True):
+                 lock=True,
+                 use_keys=False,
+                 key_file=None,
+                 allow_agent=False,
+                 ssh_strict=False,
+                 system_host_keys=False,
+                 alt_host_keys=False,
+                 alt_key_file='',
+                 ssh_config_file=None,
+                 keepalive=0):
         """
         IOS-XR device constructor.
 
@@ -80,6 +89,25 @@ class IOSXR(object):
         :param logfile:   File-like object to save device communication to or None to disable logging
         :param lock:      (bool) Auto-lock config upon open() if set to True, connect without locking if False
                           (default: True)
+        :param use_keys: Connect to target device using SSH keys.
+        :type use_keys: bool
+        :param key_file: Filename path of the SSH key file to use.
+        :type key_file: str
+        :param allow_agent: Enable use of SSH key-agent.
+        :type allow_agent: bool
+        :param ssh_strict: Automatically reject unknown SSH host keys (default: False, which
+                means unknown SSH host keys will be accepted).
+        :type ssh_strict: bool
+        :param system_host_keys: Load host keys from the user's 'known_hosts' file.
+        :type system_host_keys: bool
+        :param alt_host_keys: If `True` host keys will be loaded from the file specified in
+                'alt_key_file'.
+        :type alt_host_keys: bool
+        :param alt_key_file: SSH host key file to use (if alt_host_keys=True).
+        :type alt_key_file: str
+        :param ssh_config_file: File name of OpenSSH configuration file.
+        :type ssh_config_file: str
+        :param keepalive: Keepalive interval. Default: 0 (Does not attemtpt to keepalive the connection). 
         """
         self.hostname = str(hostname)
         self.username = str(username)
@@ -89,6 +117,14 @@ class IOSXR(object):
         self.logfile = logfile
         self.lock_on_connect = lock
         self.locked = False
+        self.use_keys = use_keys
+        self.key_file = key_file
+        self.allow_agent = allow_agent
+        self.system_host_keys = system_host_keys
+        self.alt_host_keys = alt_host_keys
+        self.alt_key_file = alt_key_file
+        self.ssh_config_file = ssh_config_file # For SSH proxy support
+        self.keepalive = keepalive
         self._cli_prompt = None
         self._xml_agent_locker = Lock()
         self._xml_agent_alive = False
@@ -159,7 +195,15 @@ class IOSXR(object):
                                          ip=self.hostname,
                                          port=self.port,
                                          username=self.username,
-                                         password=self.password)
+                                         password=self.password,
+                                         use_keys=self.use_keys,
+                                         key_file=self.key_file,
+                                         allow_agent=self.allow_agent,
+                                         system_host_keys=self.system_host_keys,
+                                         alt_host_keys=self.alt_host_keys,
+                                         alt_key_file=self.alt_key_file,
+                                         ssh_config_file=self.ssh_config_file,
+                                         keepalive=self.keepalive)
             self.device.timeout = self.timeout
             self._xml_agent_alive = True  # successfully open thus alive
         except NetMikoTimeoutException as t_err:
