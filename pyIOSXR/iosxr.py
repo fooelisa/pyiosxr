@@ -582,17 +582,17 @@ class IOSXR(object):
         :param comment:   Commit label, displayed instead of the commit ID on the device.
         :param confirmed: Commit with auto-rollback if new commit is not made in 30 to 300 sec
         """
-        rpc_command = '<CLI><Configuration>commit'
+        rpc_command = '<Commit'
         if label:
-            rpc_command += ' label %s' % label
+            rpc_command += ' Label="%s"' % label
         if comment:
-            rpc_command += ' comment %s' % comment
+            rpc_command += ' Comment="%s"' % comment
         if confirmed:
             if 30 <= int(confirmed) <= 300:
-                rpc_command += ' confirmed %d' % int(confirmed)
+                rpc_command += ' Confirmed="%d"' % int(confirmed)
             else:
                 raise InvalidInputError('confirmed needs to be between 30 and 300 seconds', self)
-        rpc_command += '</Configuration></CLI>'
+        rpc_command += '/>'
 
         self._execute_rpc(rpc_command)
 
@@ -604,17 +604,17 @@ class IOSXR(object):
         :param label:     User label saved on this commit on the device
         :param confirmed: Commit with auto-rollback if new commit is not made in 30 to 300 sec
         """
-        rpc_command = '<CLI><Configuration>commit replace'
+        rpc_command = '<Commit Replace="true"'
         if label:
-            rpc_command += ' label %s' % label
+            rpc_command += ' Label="%s"' % label
         if comment:
-            rpc_command += ' comment %s' % comment
+            rpc_command += ' Comment="%s"' % comment
         if confirmed:
             if 30 <= int(confirmed) <= 300:
-                rpc_command += ' confirmed %d' % int(confirmed)
+                rpc_command += ' Confirmed="%d"' % int(confirmed)
             else:
                 raise InvalidInputError('confirmed needs to be between 30 and 300 seconds', self)
-        rpc_command += '</Configuarion></CLI>'
+        rpc_command += '/>'
         self._execute_rpc(rpc_command)
 
     def discard_config(self):
