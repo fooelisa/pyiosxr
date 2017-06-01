@@ -68,7 +68,8 @@ class IOSXR(object):
                  port=22,
                  timeout=60,
                  logfile=None,
-                 lock=True):
+                 lock=True,
+                 **netmiko_kwargs):
         """
         IOS-XR device constructor.
 
@@ -80,6 +81,7 @@ class IOSXR(object):
         :param logfile:   File-like object to save device communication to or None to disable logging
         :param lock:      (bool) Auto-lock config upon open() if set to True, connect without locking if False
                           (default: True)
+        :netmiko_kwargs   (kwargs) Key-value args to forward to Netmiko.
         """
         self.hostname = str(hostname)
         self.username = str(username)
@@ -89,6 +91,7 @@ class IOSXR(object):
         self.logfile = logfile
         self.lock_on_connect = lock
         self.locked = False
+        self.netmiko_kwargs = netmiko_kwargs
         self._cli_prompt = None
         self._xml_agent_locker = Lock()
         self._xml_agent_alive = False
@@ -159,7 +162,8 @@ class IOSXR(object):
                                          ip=self.hostname,
                                          port=self.port,
                                          username=self.username,
-                                         password=self.password)
+                                         password=self.password,
+                                         **netmiko_kwargs)
             self.device.timeout = self.timeout
             self._xml_agent_alive = True  # successfully open thus alive
         except NetMikoTimeoutException as t_err:
