@@ -610,7 +610,7 @@ class IOSXR(object):
                 rpc_command += ' confirmed %d' % int(confirmed)
             else:
                 raise InvalidInputError('confirmed needs to be between 30 and 300 seconds', self)
-        rpc_command += '</Configuarion></CLI>'
+        rpc_command += '</Configuration></CLI>'
         self._execute_rpc(rpc_command)
 
     def discard_config(self):
