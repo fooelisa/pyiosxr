@@ -445,7 +445,7 @@ class IOSXR(object):
         """
         Executes a configuration show-type command.
         """
-        rpc_command = '<CLI><Configuration>{show_command}</Configuration></CLI>'.format(
+        rpc_command = '<CLI><Exec>{show_command}</Exec></CLI>'.format(
             show_command=escape_xml(show_command)
         )
         response = self._execute_rpc(rpc_command, delay_factor=delay_factor)
