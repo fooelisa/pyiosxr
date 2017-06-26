@@ -163,7 +163,7 @@ class IOSXR(object):
                                          port=self.port,
                                          username=self.username,
                                          password=self.password,
-                                         **netmiko_kwargs)
+                                         **self.netmiko_kwargs)
             self.device.timeout = self.timeout
             self._xml_agent_alive = True  # successfully open thus alive
         except NetMikoTimeoutException as t_err:
