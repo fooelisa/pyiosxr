@@ -584,9 +584,9 @@ class IOSXR(object):
         """
         rpc_command = '<CLI><Configuration>commit'
         if label:
-            rpc_command += ' label %s' % label
+            rpc_command += ' label "%s"' % label
         if comment:
-            rpc_command += ' comment %s' % comment
+            rpc_command += ' comment "%s"' % comment
         if confirmed:
             if 30 <= int(confirmed) <= 300:
                 rpc_command += ' confirmed %d' % int(confirmed)
