@@ -589,7 +589,7 @@ class IOSXR(object):
             if len(comment) <= 60:
                 rpc_command += ' Comment="%s"' % comment
             else:
-                raise InvalidInputError('comment needs to be shorter than 60 characters', self)
+                raise InvalidInputError('comment should be no more than 60 characters', self)
         if confirmed:
             if 30 <= int(confirmed) <= 300:
                 rpc_command += ' Confirmed="%d"' % int(confirmed)
