@@ -579,14 +579,17 @@ class IOSXR(object):
         Commit the candidate config.
 
         :param label:     Commit comment, displayed in the commit entry on the device.
-        :param comment:   Commit label, displayed instead of the commit ID on the device.
+        :param comment:   Commit label, displayed instead of the commit ID on the device. (Max 60 characters)
         :param confirmed: Commit with auto-rollback if new commit is not made in 30 to 300 sec
         """
         rpc_command = '<Commit'
         if label:
             rpc_command += ' Label="%s"' % label
         if comment:
-            rpc_command += ' Comment="%s"' % comment
+            if len(comment) <= 60:
+                rpc_command += ' Comment="%s"' % comment
+            else:
+                raise InvalidInputError('comment needs to be shorter than 60 characters', self)
         if confirmed:
             if 30 <= int(confirmed) <= 300:
                 rpc_command += ' Confirmed="%d"' % int(confirmed)
