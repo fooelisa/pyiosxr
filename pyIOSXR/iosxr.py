@@ -243,7 +243,8 @@ class IOSXR(object):
                       start=None,
                       expect_string=None,
                       read_output=None,
-                      receive=False):
+                      receive=False,
+                      cmd_verify=True):
 
         if not expect_string:
             expect_string = self._XML_MODE_PROMPT
@@ -272,7 +273,8 @@ class IOSXR(object):
                                                             strip_prompt=False,
                                                             strip_command=False,
                                                             delay_factor=delay_factor,
-                                                            max_loops=max_loops)
+                                                            max_loops=max_loops,
+                                                            cmd_verify=cmd_verify)
                 output += last_read
             except IOError as ioe:
                 if ((not last_read and self._in_cli_mode()) or
@@ -362,7 +364,7 @@ class IOSXR(object):
         xml_rpc_command = '<?xml version="1.0" encoding="UTF-8"?><Request MajorVersion="1" MinorVersion="0">' \
               + command_xml + '</Request>'
 
-        response = self._send_command(xml_rpc_command, delay_factor=delay_factor)
+        response = self._send_command(xml_rpc_command, delay_factor=delay_factor, cmd_verify=False)
 
         try:
             root = ET.fromstring(str.encode(response))
