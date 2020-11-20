@@ -1,9 +1,11 @@
 language: python
+dist: bionic
+arch:
+- amd64
+- ppc64le
 python:
-- 2.7
-- 3.4
-- 3.5
 - 3.6
+- 3.8
 install:
 - pip install -r requirements-dev.txt
 - pip install -r requirements.txt
