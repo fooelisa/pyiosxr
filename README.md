@@ -14,7 +14,7 @@ It is now maintained by Mircea Ulinic [@mirceaulinic](https://github.com/mirceau
 Requirements
 =============
 
-* netmiko >= 0.5.2
+* netmiko >= 4.0.0
 * lxml >= 3.4.2
 
 * IOS-XR >= 5.1.0

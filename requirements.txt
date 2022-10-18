@@ -1,2 +1,2 @@
-netmiko>=1.4.3
+netmiko>=4.0.0
 lxml>=3.2.4

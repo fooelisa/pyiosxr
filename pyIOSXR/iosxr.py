@@ -26,8 +26,8 @@ from xml.sax.saxutils import escape as escape_xml
 # third party lib
 from lxml import etree as ET
 from netmiko import ConnectHandler
-from netmiko.ssh_exception import NetMikoTimeoutException
-from netmiko.ssh_exception import NetMikoAuthenticationException
+from netmiko.exceptions import NetMikoTimeoutException
+from netmiko.exceptions import NetMikoAuthenticationException
 
 # local modules
 from pyIOSXR.exceptions import LockError
